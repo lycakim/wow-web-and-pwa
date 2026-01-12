@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+# Application Codebase Guidelines
+
+### Frontend Development
+- Always use Bun when installing dependencies and building the frontend.
