@@ -17,10 +17,16 @@ import { GROCERY_SECTIONS } from '@/types/barkada';
 import { MoreVertical, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
+// Must match the same palette and order as members-view.tsx
 const AVATAR_COLORS = [
-    'bg-violet-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500',
-    'bg-rose-500', 'bg-cyan-500', 'bg-pink-500', 'bg-orange-500',
-    'bg-teal-500', 'bg-indigo-500',
+    'bg-indigo-500',
+    'bg-violet-500',
+    'bg-pink-500',
+    'bg-orange-500',
+    'bg-green-500',
+    'bg-blue-500',
+    'bg-teal-500',
+    'bg-rose-500',
 ];
 
 function getInitials(name: string): string {
@@ -31,12 +37,18 @@ function getInitials(name: string): string {
     return name.slice(0, 2).toUpperCase();
 }
 
-function getAvatarColor(name: string): string {
+// Use member index for consistent color matching the members list view.
+// Falls back to hash for names not found in the members array.
+function getAvatarColor(name: string, members: Member[]): string {
+    const index = members.findIndex((m) => m.name === name);
+    if (index !== -1) {
+        return AVATAR_COLORS[index % AVATAR_COLORS.length];
+    }
     const sum = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
     return AVATAR_COLORS[sum % AVATAR_COLORS.length];
 }
 
-function Avatar({ name, size = 'md', ring = false }: { name: string; size?: 'sm' | 'md'; ring?: boolean }) {
+function Avatar({ name, members, size = 'md', ring = false }: { name: string; members: Member[]; size?: 'sm' | 'md'; ring?: boolean }) {
     return (
         <TooltipProvider delayDuration={200}>
             <Tooltip>
@@ -44,7 +56,7 @@ function Avatar({ name, size = 'md', ring = false }: { name: string; size?: 'sm'
                     <span
                         className={cn(
                             'inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white select-none',
-                            getAvatarColor(name),
+                            getAvatarColor(name, members),
                             size === 'sm' ? 'size-5 text-[9px]' : 'size-6 text-[10px]',
                             ring && 'ring-2 ring-background',
                         )}
@@ -116,10 +128,10 @@ export function GroceryView({ items, members, currentUserName, onAdd, onToggle, 
                             <span className="text-xs font-semibold">{s.label}</span>
                             {count > 0 && (
                                 <span className={cn(
-                                    'absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full text-[10px] font-bold tabular-nums',
+                                    'absolute -top-2 -right-2 flex min-w-[22px] h-[22px] px-1 items-center justify-center rounded-full text-[11px] font-bold tabular-nums ring-2',
                                     isActive
-                                        ? 'bg-white text-indigo-600'
-                                        : 'bg-indigo-600 text-white',
+                                        ? 'bg-white text-indigo-600 ring-indigo-600'
+                                        : 'bg-indigo-600 text-white ring-white dark:ring-zinc-900',
                                 )}>
                                     {count}
                                 </span>
@@ -302,7 +314,7 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                         {hasAssigned && (
                             <div className="flex items-center -space-x-1.5">
                                 {visibleAssigned.map((name) => (
-                                    <Avatar key={name} name={name} ring />
+                                    <Avatar key={name} name={name} members={members} ring />
                                 ))}
                                 {overflowCount > 0 && (
                                     <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground ring-2 ring-background">
@@ -357,7 +369,7 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                                             onSelect={(e) => { e.preventDefault(); onAssign(item.id, m.name); }}
                                             className="flex items-center gap-2.5 cursor-pointer"
                                         >
-                                            <Avatar name={m.name} size="sm" />
+                                            <Avatar name={m.name} members={members} size="sm" />
                                             <span className="flex-1 text-sm">{m.name}</span>
                                             {isSelected && (
                                                 <span className="text-indigo-600 text-xs font-semibold">✓</span>
