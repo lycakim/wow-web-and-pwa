@@ -12,6 +12,7 @@ import { ConfirmDeleteDialog } from '@/components/barkada/confirm-delete-dialog'
 import { TripCodeBanner, TripLanding } from '@/components/barkada/trip-landing';
 import { UserSetup } from '@/components/barkada/user-setup';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
 import {
     Sidebar,
     SidebarContent,
@@ -30,7 +31,7 @@ import {
 import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
-import { ArrowLeftRight, Car, Check, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
+import { ArrowLeftRight, Bell, BellOff, Car, Check, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -148,6 +149,8 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
         removeGroceryItem,
         clearCheckedGroceryItems,
     } = useTripStore(tripId);
+
+    const { isSubscribed: notifSubscribed, isLoading: notifLoading, isSupported: notifSupported, subscribe: subscribeToNotifs, unsubscribe: unsubscribeFromNotifs } = usePushNotifications(tripId, currentUserName);
 
     // Once hydrated, auto-join: claim existing member by name or add as new
     useEffect(() => {
@@ -283,6 +286,19 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                                 <Pencil className="ml-auto size-3 text-muted-foreground" />
                             </SidebarMenuButton>
                         </SidebarMenuItem>
+                        {notifSupported && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton
+                                    onClick={notifSubscribed ? unsubscribeFromNotifs : subscribeToNotifs}
+                                    disabled={notifLoading}
+                                    tooltip={{ children: notifSubscribed ? 'Turn off notifications' : 'Turn on notifications' }}
+                                >
+                                    {notifSubscribed ? <Bell className="text-indigo-600 dark:text-indigo-400" /> : <BellOff />}
+                                    <span>{notifSubscribed ? 'Notifications on' : 'Notifications off'}</span>
+                                    {notifLoading && <span className="ml-auto size-3 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />}
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                         <SidebarMenuItem>
                             <SidebarMenuButton onClick={toggleDark} tooltip={{ children: dark ? 'Light mode' : 'Dark mode' }}>
                                 {dark ? <Sun /> : <Moon />}

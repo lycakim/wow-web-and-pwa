@@ -12,7 +12,9 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             injectRegister: 'auto',
-            strategies: 'generateSW',
+            strategies: 'injectManifest',
+            srcDir: 'resources/js',
+            filename: 'sw-shared.ts',
             manifest: {
                 name: 'Barkada Planner',
                 short_name: 'Barkada',
@@ -36,10 +38,8 @@ export default defineConfig({
                     },
                 ],
             },
-            workbox: {
+            injectManifest: {
                 globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
-                navigateFallback: '/index-shared.html',
-                navigateFallbackDenylist: [/^\/api\//],
             },
         }),
     ],
