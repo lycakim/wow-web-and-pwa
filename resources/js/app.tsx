@@ -31,3 +31,10 @@ createInertiaApp({
 
 // This will set light / dark mode on load...
 initializeTheme();
+
+// Register the PWA service worker
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    import('virtual:pwa-register').then(({ registerSW }) => {
+        registerSW({ immediate: true });
+    });
+}

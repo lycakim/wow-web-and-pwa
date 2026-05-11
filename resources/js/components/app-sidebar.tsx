@@ -13,7 +13,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { BookOpen, Car, Folder, HandCoins, LayoutGrid, ReceiptText, Tag, Users, Wallet } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -22,6 +22,15 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
+];
+
+const barkadaNavItems: NavItem[] = [
+    { title: 'Members', href: { url: '/barkada/members', method: 'get' }, icon: Users },
+    { title: 'Budget', href: { url: '/barkada/budget', method: 'get' }, icon: Wallet },
+    { title: 'Expenses', href: { url: '/barkada/expenses', method: 'get' }, icon: ReceiptText },
+    { title: 'Settlement', href: { url: '/barkada/settlement', method: 'get' }, icon: HandCoins },
+    { title: 'Categories', href: { url: '/barkada/categories', method: 'get' }, icon: Tag },
+    { title: 'Carpools', href: { url: '/barkada/carpools', method: 'get' }, icon: Car },
 ];
 
 const footerNavItems: NavItem[] = [
@@ -54,6 +63,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                <NavMain items={barkadaNavItems} label="Barkada Planner" />
             </SidebarContent>
 
             <SidebarFooter>
