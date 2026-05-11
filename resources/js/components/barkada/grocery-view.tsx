@@ -10,6 +10,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { GroceryItem, GrocerySection, Member } from '@/types/barkada';
@@ -307,12 +308,15 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                     )}
                 </div>
 
-                {/* Avatar stack: assigned members + checked-by */}
+                {/* Avatar stack — tap/click to reveal names */}
                 {(hasAssigned || item.checkedByName) && (
-                    <div className="flex shrink-0 items-center">
-                        {/* Assigned avatars (stacked) */}
-                        {hasAssigned && (
-                            <div className="flex items-center -space-x-1.5">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button
+                                type="button"
+                                className="flex shrink-0 items-center -space-x-1.5 focus:outline-none"
+                                style={{ WebkitTapHighlightColor: 'transparent' }}
+                            >
                                 {visibleAssigned.map((name) => (
                                     <Avatar key={name} name={name} members={members} ring />
                                 ))}
@@ -321,27 +325,42 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                                         +{overflowCount}
                                     </span>
                                 )}
+                                {item.checkedByName && (
+                                    <span className={cn(
+                                        'inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white ring-2 ring-background bg-emerald-500',
+                                        hasAssigned && 'ml-0',
+                                    )}>
+                                        ✓
+                                    </span>
+                                )}
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent side="top" align="end" className="w-auto min-w-[160px] p-3">
+                            <div className="space-y-2">
+                                {hasAssigned && (
+                                    <div className="space-y-1.5">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Assigned to</p>
+                                        {assigned.map((name) => (
+                                            <div key={name} className="flex items-center gap-2">
+                                                <Avatar name={name} members={members} size="sm" />
+                                                <span className="text-sm">{name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {item.checkedByName && (
+                                    <div className="space-y-1.5">
+                                        {hasAssigned && <div className="h-px bg-border" />}
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Checked by</p>
+                                        <div className="flex items-center gap-2">
+                                            <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-bold text-white">✓</span>
+                                            <span className="text-sm">{item.checkedByName}</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                        {/* Checked-by avatar (green tinted, only when checked) */}
-                        {item.checkedByName && (
-                            <TooltipProvider delayDuration={200}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <span className={cn(
-                                            'inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white ring-2 ring-background bg-emerald-500',
-                                            hasAssigned && 'ml-1',
-                                        )}>
-                                            ✓
-                                        </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="text-xs">
-                                        Checked by {item.checkedByName}
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                    </div>
+                        </PopoverContent>
+                    </Popover>
                 )}
 
                 {/* Three-dot menu */}
