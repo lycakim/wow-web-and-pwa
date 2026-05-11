@@ -79,10 +79,11 @@ function useDarkMode() {
     return { dark, toggle };
 }
 
-function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: string | null; onLeave: () => void }) {
+function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: string | null; onLeave: (id: string) => void }) {
     const [view, setView] = useState<View>('home');
     const [showBanner, setShowBanner] = useState(!!tripCode);
     const [editingName, setEditingName] = useState(false);
+    const [removedFromTrip, setRemovedFromTrip] = useState(false);
     const { dark, toggle: toggleDark } = useDarkMode();
     const { name: currentUserName, saveName, isSet: nameIsSet } = useCurrentUser();
 
@@ -128,11 +129,39 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
         }
     }, [isHydrated, nameIsSet, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Detect if the current user was removed from the members list
+    useEffect(() => {
+        if (!isHydrated) return;
+        const joinedKey = `barkada-joined-${tripId}`;
+        const joinedId = localStorage.getItem(joinedKey);
+        if (!joinedId || joinedId === 'new') return;
+        const stillExists = store.members.some((m) => m.id === joinedId);
+        if (!stillExists) setRemovedFromTrip(true);
+    }, [isHydrated, store.members, tripId]);
+
     // Read the saved trip code from localStorage if not passed directly
     const displayCode = tripCode ?? localStorage.getItem(TRIP_CODE_KEY) ?? '';
 
     return (
         <>
+        {removedFromTrip && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+                <div className="mx-4 max-w-sm rounded-xl border bg-card p-6 text-center shadow-lg">
+                    <p className="text-2xl">👋</p>
+                    <h2 className="mt-2 text-base font-semibold">You've been removed</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        You're no longer a member of this trip.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => onLeave(tripId)}
+                        className="mt-4 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                    >
+                        Back to Home
+                    </button>
+                </div>
+            </div>
+        )}
         {isHydrated && (!nameIsSet || editingName) && (
             <UserSetup onSave={(n) => {
                 saveName(n);
@@ -318,7 +347,9 @@ function BarkadaSharedApp() {
         setTripId(id);
     };
 
-    const handleLeave = () => {
+    const handleLeave = (id?: string) => {
+        const resolvedId = id ?? localStorage.getItem(TRIP_ID_KEY);
+        if (resolvedId) localStorage.removeItem(`barkada-joined-${resolvedId}`);
         localStorage.removeItem(TRIP_ID_KEY);
         localStorage.removeItem(TRIP_CODE_KEY);
         setTripId(null);
