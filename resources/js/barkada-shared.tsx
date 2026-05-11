@@ -210,7 +210,7 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
                                 <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
                                     <span className="text-base leading-none">🤙</span>
                                 </div>
-                                <div className="flex flex-col gap-0.5 leading-none">
+                                <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
                                     <span className="font-semibold">{store.trip.name || 'Barkada Planner'}</span>
                                     <span className="font-mono text-xs text-muted-foreground">Code: {displayCode}</span>
                                 </div>
