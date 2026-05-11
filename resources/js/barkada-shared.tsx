@@ -83,15 +83,6 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
     const { dark, toggle: toggleDark } = useDarkMode();
     const { name: currentUserName, saveName, isSet: nameIsSet } = useCurrentUser();
 
-    // Auto-add user as a member once per trip per device
-    useEffect(() => {
-        if (!isHydrated || !nameIsSet || !currentUserName) return;
-        const joinedKey = `barkada-joined-${tripId}`;
-        if (localStorage.getItem(joinedKey)) return;
-        localStorage.setItem(joinedKey, '1');
-        addMember(currentUserName);
-    }, [isHydrated, nameIsSet, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
-
     const {
         store,
         isHydrated,
@@ -114,6 +105,15 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
         updateCarpool,
         removeCarpool,
     } = useTripStore(tripId);
+
+    // Auto-add user as a member once per trip per device
+    useEffect(() => {
+        if (!isHydrated || !nameIsSet || !currentUserName) return;
+        const joinedKey = `barkada-joined-${tripId}`;
+        if (localStorage.getItem(joinedKey)) return;
+        localStorage.setItem(joinedKey, '1');
+        addMember(currentUserName);
+    }, [isHydrated, nameIsSet, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Read the saved trip code from localStorage if not passed directly
     const displayCode = tripCode ?? localStorage.getItem(TRIP_CODE_KEY) ?? '';
