@@ -28,7 +28,7 @@ import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
 import { Car, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, Sun, Tag, Users, Wallet } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 const TRIP_ID_KEY = 'barkada-trip-id';
@@ -83,6 +83,15 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
     const { dark, toggle: toggleDark } = useDarkMode();
     const { name: currentUserName, saveName, isSet: nameIsSet } = useCurrentUser();
 
+    // Auto-add user as a member once per trip per device
+    useEffect(() => {
+        if (!isHydrated || !nameIsSet || !currentUserName) return;
+        const joinedKey = `barkada-joined-${tripId}`;
+        if (localStorage.getItem(joinedKey)) return;
+        localStorage.setItem(joinedKey, '1');
+        addMember(currentUserName);
+    }, [isHydrated, nameIsSet, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const {
         store,
         isHydrated,
@@ -112,7 +121,18 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
     return (
         <>
         {(!nameIsSet || editingName) && (
-            <UserSetup onSave={(n) => { saveName(n); setEditingName(false); }} />
+            <UserSetup onSave={(n) => {
+                saveName(n);
+                setEditingName(false);
+                // If store already hydrated, add as member immediately
+                if (isHydrated) {
+                    const joinedKey = `barkada-joined-${tripId}`;
+                    if (!localStorage.getItem(joinedKey)) {
+                        localStorage.setItem(joinedKey, '1');
+                        addMember(n);
+                    }
+                }
+            }} />
         )}
         <SidebarProvider>
             <Sidebar collapsible="icon" variant="inset">
