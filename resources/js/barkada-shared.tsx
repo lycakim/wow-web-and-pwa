@@ -344,7 +344,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                 {/* Offline / syncing banner */}
                 {(!isOnline || isSyncing) && (
                     <div className={cn(
-                        'flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors',
+                        'flex items-center gap-2 px-4 py-2 text-xs font-medium',
                         isSyncing
                             ? 'bg-indigo-600 text-white'
                             : 'bg-amber-400 text-amber-950 dark:bg-amber-500 dark:text-amber-950',
@@ -352,23 +352,20 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                         {isSyncing ? (
                             <>
                                 <span className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                <span className="flex-1">
-                                    <span className="font-semibold">Syncing…</span>
-                                    <span className="ml-1.5 opacity-80">pushing {pendingCount} change{pendingCount !== 1 ? 's' : ''}</span>
-                                </span>
+                                <span className="font-semibold">Syncing…</span>
+                                <span className="opacity-75">{pendingCount} change{pendingCount !== 1 ? 's' : ''}</span>
                             </>
                         ) : (
                             <>
-                                <span className="shrink-0 text-sm">⚡</span>
-                                <span className="flex-1 leading-snug">
-                                    <span className="font-semibold">You're offline</span>
-                                    <span className="hidden sm:inline opacity-75"> — changes will sync when you reconnect</span>
-                                </span>
-                                {pendingCount > 0 && (
-                                    <span className="shrink-0 flex items-center gap-1.5 rounded-full bg-amber-950/20 px-2.5 py-1 font-semibold tabular-nums">
-                                        <span className="text-sm font-bold leading-none">{pendingCount}</span>
-                                        <span className="opacity-80">queued</span>
+                                <span className="shrink-0">⚡</span>
+                                <span className="font-semibold">Offline</span>
+                                {pendingCount > 0 ? (
+                                    <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-950/20 px-2 py-0.5">
+                                        <span className="font-bold tabular-nums">{pendingCount}</span>
+                                        <span className="opacity-75">pending</span>
                                     </span>
+                                ) : (
+                                    <span className="ml-1 opacity-65 hidden sm:inline">— will sync when reconnected</span>
                                 )}
                             </>
                         )}

@@ -1,3 +1,7 @@
+// SW version — bump to force update on all clients
+const SW_VERSION = '2';
+console.log('[SW] version', SW_VERSION);
+
 import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 
