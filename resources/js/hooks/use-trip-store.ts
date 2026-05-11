@@ -79,6 +79,8 @@ function mapGroceryItem(row: Record<string, unknown>): GroceryItem {
         checked: row.checked as boolean,
         createdAt: row.created_at as string,
         ...(row.added_by_name ? { addedByName: row.added_by_name as string } : {}),
+        ...(row.checked_by_name ? { checkedByName: row.checked_by_name as string } : {}),
+        ...(row.assigned_to_name ? { assignedToName: row.assigned_to_name as string } : {}),
     };
 }
 
@@ -416,12 +418,26 @@ export function useTripStore(tripId: string) {
         await supabase.from('grocery_items').insert({ id, trip_id: tripId, name: name.trim(), checked: false, added_by_name: addedByName ?? null, created_at: createdAt });
     };
 
-    const toggleGroceryItem = async (id: string) => {
+    const toggleGroceryItem = async (id: string, checkedByName?: string) => {
         const item = store.groceryItems.find((i) => i.id === id);
         if (!item) return;
         const checked = !item.checked;
-        setStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.map((i) => (i.id === id ? { ...i, checked } : i)) }));
-        await supabase.from('grocery_items').update({ checked }).eq('id', id);
+        const checkedByNameValue = checked ? (checkedByName ?? null) : null;
+        setStore((prev) => ({
+            ...prev,
+            groceryItems: prev.groceryItems.map((i) =>
+                i.id === id ? { ...i, checked, checkedByName: checkedByNameValue ?? undefined } : i,
+            ),
+        }));
+        await supabase.from('grocery_items').update({ checked, checked_by_name: checkedByNameValue }).eq('id', id);
+    };
+
+    const assignGroceryItem = async (id: string, assignedToName: string | undefined) => {
+        setStore((prev) => ({
+            ...prev,
+            groceryItems: prev.groceryItems.map((i) => (i.id === id ? { ...i, assignedToName } : i)),
+        }));
+        await supabase.from('grocery_items').update({ assigned_to_name: assignedToName ?? null }).eq('id', id);
     };
 
     const removeGroceryItem = async (id: string) => {
@@ -466,6 +482,7 @@ export function useTripStore(tripId: string) {
         removeCarpool,
         addGroceryItem,
         toggleGroceryItem,
+        assignGroceryItem,
         removeGroceryItem,
         clearCheckedGroceryItems,
         clearAll,

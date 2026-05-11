@@ -109,6 +109,7 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
         removeCarpool,
         addGroceryItem,
         toggleGroceryItem,
+        assignGroceryItem,
         removeGroceryItem,
         clearCheckedGroceryItems,
     } = useTripStore(tripId);
@@ -288,9 +289,11 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
                             {view === 'grocery' && (
                                 <GroceryView
                                     items={store.groceryItems}
+                                    members={store.members}
                                     currentUserName={currentUserName || undefined}
                                     onAdd={addGroceryItem}
                                     onToggle={toggleGroceryItem}
+                                    onAssign={assignGroceryItem}
                                     onRemove={removeGroceryItem}
                                     onClearChecked={clearCheckedGroceryItems}
                                 />

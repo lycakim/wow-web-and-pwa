@@ -2,20 +2,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { GroceryItem } from '@/types/barkada';
-import { Check, ShoppingCart, Trash2 } from 'lucide-react';
+import type { GroceryItem, Member } from '@/types/barkada';
+import { Check, ShoppingCart, Trash2, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 
 interface GroceryViewProps {
     items: GroceryItem[];
+    members: Member[];
     currentUserName?: string;
     onAdd: (name: string, addedByName?: string) => void;
-    onToggle: (id: string) => void;
+    onToggle: (id: string, checkedByName?: string) => void;
+    onAssign: (id: string, assignedToName: string | undefined) => void;
     onRemove: (id: string) => void;
     onClearChecked: () => void;
 }
 
-export function GroceryView({ items, currentUserName, onAdd, onToggle, onRemove, onClearChecked }: GroceryViewProps) {
+export function GroceryView({ items, members, currentUserName, onAdd, onToggle, onAssign, onRemove, onClearChecked }: GroceryViewProps) {
     const [input, setInput] = useState('');
 
     const submit = () => {
@@ -68,7 +70,15 @@ export function GroceryView({ items, currentUserName, onAdd, onToggle, onRemove,
                         <div className="space-y-1">
                             {/* Unchecked items */}
                             {unchecked.map((item) => (
-                                <GroceryRow key={item.id} item={item} onToggle={onToggle} onRemove={onRemove} />
+                                <GroceryRow
+                                    key={item.id}
+                                    item={item}
+                                    members={members}
+                                    currentUserName={currentUserName}
+                                    onToggle={onToggle}
+                                    onAssign={onAssign}
+                                    onRemove={onRemove}
+                                />
                             ))}
 
                             {/* Divider if both lists have items */}
@@ -82,7 +92,15 @@ export function GroceryView({ items, currentUserName, onAdd, onToggle, onRemove,
 
                             {/* Checked items */}
                             {checked.map((item) => (
-                                <GroceryRow key={item.id} item={item} onToggle={onToggle} onRemove={onRemove} />
+                                <GroceryRow
+                                    key={item.id}
+                                    item={item}
+                                    members={members}
+                                    currentUserName={currentUserName}
+                                    onToggle={onToggle}
+                                    onAssign={onAssign}
+                                    onRemove={onRemove}
+                                />
                             ))}
                         </div>
                     )}
@@ -92,43 +110,117 @@ export function GroceryView({ items, currentUserName, onAdd, onToggle, onRemove,
     );
 }
 
-function GroceryRow({ item, onToggle, onRemove }: { item: GroceryItem; onToggle: (id: string) => void; onRemove: (id: string) => void }) {
+interface GroceryRowProps {
+    item: GroceryItem;
+    members: Member[];
+    currentUserName?: string;
+    onToggle: (id: string, checkedByName?: string) => void;
+    onAssign: (id: string, assignedToName: string | undefined) => void;
+    onRemove: (id: string) => void;
+}
+
+function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemove }: GroceryRowProps) {
+    const [showAssign, setShowAssign] = useState(false);
+
     return (
-        <div className={cn('flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors', item.checked ? 'opacity-50' : 'hover:bg-muted/50')}>
-            {/* Checkbox */}
-            <button
-                type="button"
-                onClick={() => onToggle(item.id)}
-                className={cn(
-                    'flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
-                    item.checked
-                        ? 'border-indigo-600 bg-indigo-600 text-white'
-                        : 'border-muted-foreground/40 hover:border-indigo-600',
-                )}
-            >
-                {item.checked && <Check className="size-3 stroke-[3]" />}
-            </button>
+        <div className={cn('rounded-lg px-3 py-2 transition-colors', item.checked ? 'opacity-50' : 'hover:bg-muted/50')}>
+            <div className="flex items-center gap-3">
+                {/* Checkbox */}
+                <button
+                    type="button"
+                    onClick={() => onToggle(item.id, currentUserName)}
+                    className={cn(
+                        'flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                        item.checked
+                            ? 'border-indigo-600 bg-indigo-600 text-white'
+                            : 'border-muted-foreground/40 hover:border-indigo-600',
+                    )}
+                >
+                    {item.checked && <Check className="size-3 stroke-[3]" />}
+                </button>
 
-            {/* Name */}
-            <span className={cn('flex-1 text-sm', item.checked && 'line-through text-muted-foreground')}>
-                {item.name}
-            </span>
-
-            {/* Added by badge */}
-            {item.addedByName && (
-                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                    {item.addedByName}
+                {/* Name */}
+                <span className={cn('flex-1 text-sm', item.checked && 'line-through text-muted-foreground')}>
+                    {item.name}
                 </span>
+
+                {/* Assign button (only on unchecked items) */}
+                {!item.checked && members.length > 0 && (
+                    <button
+                        type="button"
+                        onClick={() => setShowAssign((v) => !v)}
+                        className={cn(
+                            'shrink-0 transition-colors',
+                            item.assignedToName
+                                ? 'text-indigo-600 dark:text-indigo-400'
+                                : 'text-muted-foreground/40 hover:text-indigo-600',
+                        )}
+                        title="Assign to member"
+                    >
+                        <UserRound className="size-4" />
+                    </button>
+                )}
+
+                {/* Added by / assigned to badge */}
+                {item.assignedToName && !item.checked && (
+                    <span className="shrink-0 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                        → {item.assignedToName}
+                    </span>
+                )}
+
+                {/* Added by badge (when not assigned) */}
+                {item.addedByName && !item.assignedToName && !item.checked && (
+                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                        {item.addedByName}
+                    </span>
+                )}
+
+                {/* Delete */}
+                <button
+                    type="button"
+                    onClick={() => onRemove(item.id)}
+                    className="shrink-0 text-muted-foreground/40 hover:text-destructive transition-colors"
+                >
+                    <Trash2 className="size-4" />
+                </button>
+            </div>
+
+            {/* Checked-by attribution */}
+            {item.checked && item.checkedByName && (
+                <p className="mt-0.5 pl-8 text-[10px] text-muted-foreground">
+                    Checked by {item.checkedByName}
+                </p>
             )}
 
-            {/* Delete */}
-            <button
-                type="button"
-                onClick={() => onRemove(item.id)}
-                className="shrink-0 text-muted-foreground/40 hover:text-destructive transition-colors"
-            >
-                <Trash2 className="size-4" />
-            </button>
+            {/* Assign picker */}
+            {showAssign && !item.checked && (
+                <div className="mt-2 flex flex-wrap gap-1 pl-8">
+                    {item.assignedToName && (
+                        <button
+                            type="button"
+                            onClick={() => { onAssign(item.id, undefined); setShowAssign(false); }}
+                            className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        >
+                            <X className="size-3" /> Unassign
+                        </button>
+                    )}
+                    {members.map((m) => (
+                        <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => { onAssign(item.id, m.name); setShowAssign(false); }}
+                            className={cn(
+                                'rounded-full px-2 py-0.5 text-[11px] transition-colors',
+                                item.assignedToName === m.name
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'bg-muted text-muted-foreground hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300',
+                            )}
+                        >
+                            {m.name}
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

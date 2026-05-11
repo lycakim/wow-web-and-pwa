@@ -335,10 +335,23 @@ export function useBarkadaStore() {
         updateStore((prev) => ({ ...prev, groceryItems: [...prev.groceryItems, item] }));
     };
 
-    const toggleGroceryItem = (id: string) => {
+    const toggleGroceryItem = (id: string, checkedByName?: string) => {
         updateStore((prev) => ({
             ...prev,
-            groceryItems: prev.groceryItems.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item)),
+            groceryItems: prev.groceryItems.map((item) =>
+                item.id === id
+                    ? { ...item, checked: !item.checked, checkedByName: !item.checked ? checkedByName : undefined }
+                    : item,
+            ),
+        }));
+    };
+
+    const assignGroceryItem = (id: string, assignedToName: string | undefined) => {
+        updateStore((prev) => ({
+            ...prev,
+            groceryItems: prev.groceryItems.map((item) =>
+                item.id === id ? { ...item, assignedToName } : item,
+            ),
         }));
     };
 
@@ -378,6 +391,7 @@ export function useBarkadaStore() {
         removeCarpool,
         addGroceryItem,
         toggleGroceryItem,
+        assignGroceryItem,
         removeGroceryItem,
         clearCheckedGroceryItems,
         clearAll,
