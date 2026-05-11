@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { generateTripCode } from '@/lib/trip-code';
-import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Expense, GroceryItem, Member, Trip } from '@/types/barkada';
+import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Expense, GroceryItem, GrocerySection, Member, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useRef, useState } from 'react';
 
@@ -78,6 +78,7 @@ function mapGroceryItem(row: Record<string, unknown>): GroceryItem {
         id: row.id as string,
         name: row.name as string,
         checked: row.checked as boolean,
+        section: (row.section as GrocerySection) ?? 'buy',
         createdAt: row.created_at as string,
         ...(row.added_by_name ? { addedByName: row.added_by_name as string } : {}),
         ...(row.checked_by_name ? { checkedByName: row.checked_by_name as string } : {}),
@@ -417,12 +418,12 @@ export function useTripStore(tripId: string) {
 
     // ── Grocery ───────────────────────────────────────────────────────────────
 
-    const addGroceryItem = async (name: string, addedByName?: string) => {
+    const addGroceryItem = async (name: string, section: GrocerySection, addedByName?: string) => {
         const id = crypto.randomUUID();
         const createdAt = new Date().toISOString();
-        const item: GroceryItem = { id, name: name.trim(), checked: false, createdAt, ...(addedByName ? { addedByName } : {}) };
+        const item: GroceryItem = { id, name: name.trim(), checked: false, section, createdAt, ...(addedByName ? { addedByName } : {}) };
         setStore((prev) => ({ ...prev, groceryItems: [...prev.groceryItems, item] }));
-        await supabase.from('grocery_items').insert({ id, trip_id: tripId, name: name.trim(), checked: false, added_by_name: addedByName ?? null, created_at: createdAt });
+        await supabase.from('grocery_items').insert({ id, trip_id: tripId, name: name.trim(), checked: false, section, added_by_name: addedByName ?? null, created_at: createdAt });
     };
 
     const toggleGroceryItem = async (id: string, checkedByName?: string) => {
@@ -458,10 +459,15 @@ export function useTripStore(tripId: string) {
         await supabase.from('grocery_items').delete().eq('id', id);
     };
 
-    const clearCheckedGroceryItems = async () => {
-        const checkedIds = store.groceryItems.filter((i) => i.checked).map((i) => i.id);
+    const clearCheckedGroceryItems = async (section?: GrocerySection) => {
+        const checkedIds = store.groceryItems
+            .filter((i) => i.checked && (!section || (i.section ?? 'buy') === section))
+            .map((i) => i.id);
         if (checkedIds.length === 0) return;
-        setStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.filter((i) => !i.checked) }));
+        setStore((prev) => ({
+            ...prev,
+            groceryItems: prev.groceryItems.filter((i) => !checkedIds.includes(i.id)),
+        }));
         await supabase.from('grocery_items').delete().in('id', checkedIds);
     };
 

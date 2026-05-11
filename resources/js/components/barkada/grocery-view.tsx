@@ -2,45 +2,89 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { GroceryItem, Member } from '@/types/barkada';
-import { Check, ShoppingCart, Trash2, UserRound } from 'lucide-react';
+import type { GroceryItem, GrocerySection, Member } from '@/types/barkada';
+import { GROCERY_SECTIONS } from '@/types/barkada';
+import { Check, Trash2, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 
 interface GroceryViewProps {
     items: GroceryItem[];
     members: Member[];
     currentUserName?: string;
-    onAdd: (name: string, addedByName?: string) => void;
+    onAdd: (name: string, section: GrocerySection, addedByName?: string) => void;
     onToggle: (id: string, checkedByName?: string) => void;
     onAssign: (id: string, memberName: string) => void;
     onRemove: (id: string) => void;
-    onClearChecked: () => void;
+    onClearChecked: (section: GrocerySection) => void;
 }
 
 export function GroceryView({ items, members, currentUserName, onAdd, onToggle, onAssign, onRemove, onClearChecked }: GroceryViewProps) {
+    const [activeSection, setActiveSection] = useState<GrocerySection>('buy');
     const [input, setInput] = useState('');
+
+    const sectionItems = items.filter((i) => (i.section ?? 'buy') === activeSection);
+    const unchecked = sectionItems.filter((i) => !i.checked);
+    const checked = sectionItems.filter((i) => i.checked);
+    const sectionMeta = GROCERY_SECTIONS.find((s) => s.key === activeSection)!;
+
+    // Badge counts per tab
+    const countBySection = Object.fromEntries(
+        GROCERY_SECTIONS.map((s) => [s.key, items.filter((i) => (i.section ?? 'buy') === s.key && !i.checked).length]),
+    );
 
     const submit = () => {
         if (!input.trim()) return;
-        onAdd(input.trim(), currentUserName);
+        onAdd(input.trim(), activeSection, currentUserName);
         setInput('');
     };
 
-    const unchecked = items.filter((i) => !i.checked);
-    const checked = items.filter((i) => i.checked);
+    const hasCheckedInSection = checked.length > 0;
 
     return (
         <div className="space-y-4 p-4">
+            {/* Section tabs */}
+            <div className="flex rounded-xl border bg-muted/40 p-1 gap-1">
+                {GROCERY_SECTIONS.map((s) => (
+                    <button
+                        key={s.key}
+                        type="button"
+                        onClick={() => setActiveSection(s.key)}
+                        className={cn(
+                            'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition-colors',
+                            activeSection === s.key
+                                ? 'bg-background shadow-sm text-foreground'
+                                : 'text-muted-foreground hover:text-foreground',
+                        )}
+                    >
+                        <span>{s.icon}</span>
+                        <span>{s.label}</span>
+                        {countBySection[s.key] > 0 && (
+                            <span className={cn(
+                                'ml-0.5 rounded-full px-1.5 py-0 text-[10px] font-semibold tabular-nums',
+                                activeSection === s.key
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'bg-muted-foreground/20 text-muted-foreground',
+                            )}>
+                                {countBySection[s.key]}
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                     <div>
-                        <CardTitle>Grocery List</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <span>{sectionMeta.icon}</span>
+                            <span>{sectionMeta.label}</span>
+                        </CardTitle>
                         <p className="mt-1 text-sm text-muted-foreground">
                             {unchecked.length} remaining · {checked.length} done
                         </p>
                     </div>
-                    {checked.length > 0 && (
-                        <Button size="sm" variant="outline" onClick={onClearChecked} className="shrink-0 text-xs text-muted-foreground">
+                    {hasCheckedInSection && (
+                        <Button size="sm" variant="outline" onClick={() => onClearChecked(activeSection)} className="shrink-0 text-xs text-muted-foreground">
                             Clear done
                         </Button>
                     )}
@@ -49,7 +93,11 @@ export function GroceryView({ items, members, currentUserName, onAdd, onToggle, 
                     {/* Add item input */}
                     <div className="flex gap-2">
                         <Input
-                            placeholder="Add an item..."
+                            placeholder={
+                                activeSection === 'buy' ? 'e.g. 5KL Rice, Softdrinks...' :
+                                activeSection === 'bring' ? 'e.g. Frying pan, Cooler...' :
+                                'e.g. Adobo - Chicken, Breakfast included...'
+                            }
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -60,10 +108,10 @@ export function GroceryView({ items, members, currentUserName, onAdd, onToggle, 
                         </Button>
                     </div>
 
-                    {items.length === 0 ? (
+                    {sectionItems.length === 0 ? (
                         <div className="py-10 text-center">
-                            <ShoppingCart className="mx-auto size-10 text-muted-foreground/40" />
-                            <p className="mt-2 text-sm font-medium">List is empty</p>
+                            <p className="text-4xl">{sectionMeta.icon}</p>
+                            <p className="mt-2 text-sm font-medium">{sectionMeta.emptyText}</p>
                             <p className="text-xs text-muted-foreground">Add items above to get started</p>
                         </div>
                     ) : (
@@ -123,7 +171,6 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
 
     return (
         <div className={cn('rounded-lg px-3 py-2 transition-colors', item.checked ? 'opacity-60' : 'hover:bg-muted/50')}>
-            {/* Main row */}
             <div className="flex items-center gap-3">
                 {/* Checkbox */}
                 <button
@@ -144,16 +191,14 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                     {item.name}
                 </span>
 
-                {/* Assign toggle button (unchecked only) */}
+                {/* Assign toggle (unchecked only, when members exist) */}
                 {!item.checked && members.length > 0 && (
                     <button
                         type="button"
                         onClick={() => setShowAssign((v) => !v)}
                         className={cn(
                             'shrink-0 transition-colors',
-                            hasAssigned
-                                ? 'text-indigo-600 dark:text-indigo-400'
-                                : 'text-muted-foreground/40 hover:text-indigo-600',
+                            hasAssigned ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground/40 hover:text-indigo-600',
                         )}
                         title="Assign to members"
                     >
@@ -171,9 +216,9 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                 </button>
             </div>
 
-            {/* Meta row: added by · assigned to · checked by */}
+            {/* Meta: added by · assigned to · checked by */}
             {(item.addedByName || hasAssigned || item.checkedByName) && (
-                <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-8">
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-8">
                     {item.addedByName && (
                         <span className="text-[10px] text-muted-foreground">
                             Added by <span className="font-medium">{item.addedByName}</span>
@@ -204,9 +249,19 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                 </div>
             )}
 
-            {/* Assign picker (multi-select toggle) */}
+            {/* Assign picker */}
             {showAssign && !item.checked && (
                 <div className="mt-2 flex flex-wrap gap-1 pl-8">
+                    {hasAssigned && assigned.map((n) => (
+                        <button
+                            key={n}
+                            type="button"
+                            onClick={() => onAssign(item.id, n)}
+                            className="flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[11px] text-white hover:bg-indigo-700 transition-colors"
+                        >
+                            <X className="size-3" /> {n}
+                        </button>
+                    ))}
                     {members.map((m) => {
                         const isSelected = assigned.includes(m.name);
                         return (

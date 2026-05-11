@@ -1,4 +1,4 @@
-import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Expense, GroceryItem, Member, Settlement, Trip } from '@/types/barkada';
+import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Expense, GroceryItem, GrocerySection, Member, Settlement, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useState } from 'react';
 
@@ -330,8 +330,8 @@ export function useBarkadaStore() {
         }));
     };
 
-    const addGroceryItem = (name: string, addedByName?: string) => {
-        const item: GroceryItem = { id: crypto.randomUUID(), name: name.trim(), checked: false, createdAt: new Date().toISOString(), ...(addedByName ? { addedByName } : {}) };
+    const addGroceryItem = (name: string, section: GrocerySection, addedByName?: string) => {
+        const item: GroceryItem = { id: crypto.randomUUID(), name: name.trim(), checked: false, section, createdAt: new Date().toISOString(), ...(addedByName ? { addedByName } : {}) };
         updateStore((prev) => ({ ...prev, groceryItems: [...prev.groceryItems, item] }));
     };
 
@@ -364,8 +364,11 @@ export function useBarkadaStore() {
         updateStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.filter((item) => item.id !== id) }));
     };
 
-    const clearCheckedGroceryItems = () => {
-        updateStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.filter((item) => !item.checked) }));
+    const clearCheckedGroceryItems = (section?: GrocerySection) => {
+        updateStore((prev) => ({
+            ...prev,
+            groceryItems: prev.groceryItems.filter((item) => !(item.checked && (!section || (item.section ?? 'buy') === section))),
+        }));
     };
 
     const clearAll = () => {

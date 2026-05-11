@@ -56,10 +56,19 @@ export interface BarkadaStore {
     groceryItems: GroceryItem[];
 }
 
+export type GrocerySection = 'buy' | 'bring' | 'meal';
+
+export const GROCERY_SECTIONS: { key: GrocerySection; label: string; icon: string; emptyText: string }[] = [
+    { key: 'buy', label: 'To Buy', icon: '🛒', emptyText: 'No items to buy yet' },
+    { key: 'bring', label: 'To Bring', icon: '🎒', emptyText: 'No items to bring yet' },
+    { key: 'meal', label: 'Meal Plan', icon: '🍽️', emptyText: 'No meals planned yet' },
+];
+
 export interface GroceryItem {
     id: string;
     name: string;
     checked: boolean;
+    section: GrocerySection;
     addedByName?: string;
     checkedByName?: string;
     assignedToNames?: string[];
