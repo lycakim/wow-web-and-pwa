@@ -1,5 +1,16 @@
 import '../../resources/css/standalone.css';
 
+// When a new service worker takes control (skipWaiting + clientsClaim), the
+// already-loaded page has stale chunk hashes. Reload once so the fresh build loads.
+if ('serviceWorker' in navigator) {
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloading) return;
+        reloading = true;
+        window.location.reload();
+    });
+}
+
 import { BudgetView } from '@/components/barkada/budget-view';
 import { GroceryView } from '@/components/barkada/grocery-view';
 import { CarpoolsView } from '@/components/barkada/carpools-view';
