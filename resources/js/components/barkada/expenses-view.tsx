@@ -429,58 +429,59 @@ export function ExpensesView({ store, onAdd, onRemove, currentUserName }: Expens
                         ) : (
                             <>
                                 {/* Mobile card list */}
-                                <div className="divide-y sm:hidden">
+                                <div className="space-y-3 px-4 pt-3 pb-4 sm:hidden">
                                     {filtered.map((expense) => {
                                         const meta = getCategoryMeta(expense.category, store);
                                         const payer = memberById[expense.paidById];
                                         const splitBadge = SPLIT_BADGE[expense.splitType] ?? SPLIT_BADGE.custom;
                                         const carpoolName = expense.carpoolId ? carpoolById[expense.carpoolId]?.name : null;
                                         return (
-                                            <div key={expense.id} className="px-4 py-3">
-                                                <div className="flex items-center gap-3">
-                                                    {/* Category icon */}
-                                                    <div className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl text-xl', meta.bgClass)}>
-                                                        {meta.icon}
-                                                    </div>
+                                            <div key={expense.id} className="rounded-2xl border bg-card p-4 shadow-sm">
+                                                {/* Row 1: category pill + delete */}
+                                                <div className="flex items-center justify-between">
+                                                    <Badge variant="outline" className={cn('border-0 gap-1 text-xs font-medium', meta.bgClass, meta.textClass)}>
+                                                        {meta.icon} {meta.shortLabel}
+                                                    </Badge>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDeleteTarget({ id: expense.id, description: expense.description })}
+                                                        className="flex size-7 items-center justify-center rounded-full text-muted-foreground/30 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                                    >
+                                                        <Trash2 className="size-3.5" />
+                                                    </button>
+                                                </div>
 
-                                                    {/* Main content */}
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <p className="truncate text-sm font-semibold leading-snug">{expense.description}</p>
-                                                            <span className="shrink-0 text-sm font-bold tabular-nums">{formatPeso(expense.amount)}</span>
-                                                        </div>
-                                                        <div className="mt-0.5 flex items-center justify-between gap-2">
-                                                            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                                                                {expense.splitType !== 'kkb' && (
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        Paid by <span className="font-medium text-foreground">{payer?.name ?? 'Unknown'}</span>
-                                                                    </span>
-                                                                )}
-                                                                <span className="text-xs text-muted-foreground/50">·</span>
-                                                                <span className="text-xs text-muted-foreground">{formatDate(expense.createdAt)}</span>
-                                                                <Badge variant="outline" className={cn('border-0 px-1.5 py-0 text-[10px]', splitBadge.className)}>
-                                                                    {carpoolName ?? splitBadge.label}
-                                                                </Badge>
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setDeleteTarget({ id: expense.id, description: expense.description })}
-                                                                className="shrink-0 flex size-7 items-center justify-center rounded-full text-muted-foreground/30 hover:bg-destructive/10 hover:text-destructive transition-colors"
-                                                            >
-                                                                <Trash2 className="size-3.5" />
-                                                            </button>
-                                                        </div>
-                                                        {expense.loggedByName && (
-                                                            <p className="mt-0.5 text-[10px] text-muted-foreground/60">
-                                                                logged by <span className="font-medium text-indigo-600 dark:text-indigo-400">{expense.loggedByName}</span>
-                                                            </p>
-                                                        )}
-                                                    </div>
+                                                {/* Row 2: description */}
+                                                <p className="mt-2.5 text-base font-semibold leading-snug">{expense.description}</p>
+
+                                                {/* Row 3: amount + split badge */}
+                                                <div className="mt-2 flex items-end justify-between gap-2">
+                                                    <span className="text-2xl font-bold tabular-nums text-indigo-600 dark:text-indigo-400">
+                                                        {formatPeso(expense.amount)}
+                                                    </span>
+                                                    <Badge variant="outline" className={cn('mb-0.5 border-0 px-2 py-0.5 text-[11px] font-medium', splitBadge.className)}>
+                                                        {carpoolName ?? splitBadge.label}
+                                                    </Badge>
+                                                </div>
+
+                                                {/* Row 4: payer + date */}
+                                                <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
+                                                    {expense.splitType !== 'kkb' && (
+                                                        <span>Paid by <span className="font-medium text-foreground">{payer?.name ?? 'Unknown'}</span></span>
+                                                    )}
+                                                    {expense.splitType !== 'kkb' && <span>·</span>}
+                                                    <span>{formatDate(expense.createdAt)}</span>
+                                                    {expense.loggedByName && (
+                                                        <>
+                                                            <span>·</span>
+                                                            <span>by <span className="font-medium text-indigo-600 dark:text-indigo-400">{expense.loggedByName}</span></span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
                                     })}
-                                    <div className="flex justify-between px-4 py-3 text-sm font-semibold">
+                                    <div className="flex justify-between rounded-2xl border bg-muted/40 px-4 py-3 text-sm font-semibold">
                                         <span>Total</span>
                                         <span className="tabular-nums">{formatPeso(totalFiltered)}</span>
                                     </div>
