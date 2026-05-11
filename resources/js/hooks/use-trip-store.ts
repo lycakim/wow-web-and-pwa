@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Expense, Member, Trip } from '@/types/barkada';
+import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Expense, GroceryItem, Member, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useRef, useState } from 'react';
 
@@ -14,6 +14,7 @@ const DEFAULT_STORE: BarkadaStore = {
     contingency: 0,
     hiddenBuiltInCategories: [],
     inactiveCategories: [],
+    groceryItems: [],
 };
 
 // ── Row mappers ───────────────────────────────────────────────────────────────
@@ -71,6 +72,16 @@ function mapCarpool(row: Record<string, unknown>): Carpool {
     };
 }
 
+function mapGroceryItem(row: Record<string, unknown>): GroceryItem {
+    return {
+        id: row.id as string,
+        name: row.name as string,
+        checked: row.checked as boolean,
+        createdAt: row.created_at as string,
+        ...(row.added_by_name ? { addedByName: row.added_by_name as string } : {}),
+    };
+}
+
 function mapCustomCategory(rows: Record<string, unknown>[]): Record<string, CategoryMeta> {
     return Object.fromEntries(
         rows.map((r) => [
@@ -91,13 +102,14 @@ function mapCustomCategory(rows: Record<string, unknown>[]): Record<string, Cate
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
 async function fetchAll(tripId: string): Promise<BarkadaStore> {
-    const [tripRes, membersRes, budgetRes, expensesRes, carpoolsRes, catRes] = await Promise.all([
+    const [tripRes, membersRes, budgetRes, expensesRes, carpoolsRes, catRes, groceryRes] = await Promise.all([
         supabase.from('trips').select('*').eq('id', tripId).single(),
         supabase.from('members').select('*').eq('trip_id', tripId).order('created_at'),
         supabase.from('budget_items').select('*').eq('trip_id', tripId).order('created_at'),
         supabase.from('expenses').select('*').eq('trip_id', tripId).order('created_at', { ascending: false }),
         supabase.from('carpools').select('*').eq('trip_id', tripId).order('created_at'),
         supabase.from('custom_categories').select('*').eq('trip_id', tripId).order('created_at'),
+        supabase.from('grocery_items').select('*').eq('trip_id', tripId).order('created_at'),
     ]);
 
     return {
@@ -108,6 +120,7 @@ async function fetchAll(tripId: string): Promise<BarkadaStore> {
         expenses: (expensesRes.data ?? []).map(mapExpense),
         carpools: (carpoolsRes.data ?? []).map(mapCarpool),
         customCategories: mapCustomCategory(catRes.data ?? []),
+        groceryItems: (groceryRes.data ?? []).map(mapGroceryItem),
     };
 }
 
@@ -193,6 +206,15 @@ export function useTripStore(tripId: string) {
             })
             .subscribe();
 
+        const groceryChannel = supabase
+            .channel(`grocery_items:${tripId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'grocery_items', filter: `trip_id=eq.${tripId}` }, () => {
+                supabase.from('grocery_items').select('*').eq('trip_id', tripId).order('created_at').then(({ data }) => {
+                    setStore((prev) => ({ ...prev, groceryItems: (data ?? []).map(mapGroceryItem) }));
+                });
+            })
+            .subscribe();
+
         return () => {
             supabase.removeChannel(tripChannel);
             supabase.removeChannel(membersChannel);
@@ -200,6 +222,7 @@ export function useTripStore(tripId: string) {
             supabase.removeChannel(expensesChannel);
             supabase.removeChannel(carpoolsChannel);
             supabase.removeChannel(catChannel);
+            supabase.removeChannel(groceryChannel);
         };
     }, [isHydrated, tripId]);
 
@@ -383,6 +406,36 @@ export function useTripStore(tripId: string) {
         await supabase.from('carpools').delete().eq('id', id);
     };
 
+    // ── Grocery ───────────────────────────────────────────────────────────────
+
+    const addGroceryItem = async (name: string, addedByName?: string) => {
+        const id = crypto.randomUUID();
+        const createdAt = new Date().toISOString();
+        const item: GroceryItem = { id, name: name.trim(), checked: false, createdAt, ...(addedByName ? { addedByName } : {}) };
+        setStore((prev) => ({ ...prev, groceryItems: [...prev.groceryItems, item] }));
+        await supabase.from('grocery_items').insert({ id, trip_id: tripId, name: name.trim(), checked: false, added_by_name: addedByName ?? null, created_at: createdAt });
+    };
+
+    const toggleGroceryItem = async (id: string) => {
+        const item = store.groceryItems.find((i) => i.id === id);
+        if (!item) return;
+        const checked = !item.checked;
+        setStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.map((i) => (i.id === id ? { ...i, checked } : i)) }));
+        await supabase.from('grocery_items').update({ checked }).eq('id', id);
+    };
+
+    const removeGroceryItem = async (id: string) => {
+        setStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.filter((i) => i.id !== id) }));
+        await supabase.from('grocery_items').delete().eq('id', id);
+    };
+
+    const clearCheckedGroceryItems = async () => {
+        const checkedIds = store.groceryItems.filter((i) => i.checked).map((i) => i.id);
+        if (checkedIds.length === 0) return;
+        setStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.filter((i) => !i.checked) }));
+        await supabase.from('grocery_items').delete().in('id', checkedIds);
+    };
+
     // ── Clear all ─────────────────────────────────────────────────────────────
 
     const clearAll = async () => {
@@ -411,6 +464,10 @@ export function useTripStore(tripId: string) {
         addCarpool,
         updateCarpool,
         removeCarpool,
+        addGroceryItem,
+        toggleGroceryItem,
+        removeGroceryItem,
+        clearCheckedGroceryItems,
         clearAll,
     };
 }

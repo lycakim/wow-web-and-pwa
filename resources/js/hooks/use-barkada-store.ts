@@ -1,4 +1,4 @@
-import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Expense, Member, Settlement, Trip } from '@/types/barkada';
+import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Expense, GroceryItem, Member, Settlement, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useState } from 'react';
 
@@ -15,6 +15,7 @@ const DEFAULT_STORE: BarkadaStore = {
     contingency: 0,
     hiddenBuiltInCategories: [],
     inactiveCategories: [],
+    groceryItems: [],
 };
 
 function persist(store: BarkadaStore): void {
@@ -164,6 +165,7 @@ export function useBarkadaStore() {
                     contingency: parsed.contingency ?? 0,
                     hiddenBuiltInCategories: parsed.hiddenBuiltInCategories ?? [],
                     inactiveCategories: parsed.inactiveCategories ?? [],
+                    groceryItems: parsed.groceryItems ?? [],
                 });
             }
         } catch {
@@ -328,6 +330,26 @@ export function useBarkadaStore() {
         }));
     };
 
+    const addGroceryItem = (name: string, addedByName?: string) => {
+        const item: GroceryItem = { id: crypto.randomUUID(), name: name.trim(), checked: false, createdAt: new Date().toISOString(), ...(addedByName ? { addedByName } : {}) };
+        updateStore((prev) => ({ ...prev, groceryItems: [...prev.groceryItems, item] }));
+    };
+
+    const toggleGroceryItem = (id: string) => {
+        updateStore((prev) => ({
+            ...prev,
+            groceryItems: prev.groceryItems.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item)),
+        }));
+    };
+
+    const removeGroceryItem = (id: string) => {
+        updateStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.filter((item) => item.id !== id) }));
+    };
+
+    const clearCheckedGroceryItems = () => {
+        updateStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.filter((item) => !item.checked) }));
+    };
+
     const clearAll = () => {
         persist(DEFAULT_STORE);
         setStore(DEFAULT_STORE);
@@ -354,6 +376,10 @@ export function useBarkadaStore() {
         addCarpool,
         updateCarpool,
         removeCarpool,
+        addGroceryItem,
+        toggleGroceryItem,
+        removeGroceryItem,
+        clearCheckedGroceryItems,
         clearAll,
     };
 }

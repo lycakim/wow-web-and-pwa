@@ -1,6 +1,7 @@
 import '../../resources/css/standalone.css';
 
 import { BudgetView } from '@/components/barkada/budget-view';
+import { GroceryView } from '@/components/barkada/grocery-view';
 import { CarpoolsView } from '@/components/barkada/carpools-view';
 import { CategoriesView } from '@/components/barkada/categories-view';
 import { ExpensesView } from '@/components/barkada/expenses-view';
@@ -27,7 +28,7 @@ import {
 import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
-import { Car, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, Sun, Tag, Users, Wallet } from 'lucide-react';
+import { Car, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -44,6 +45,7 @@ const NAV_ITEMS: NavItem[] = [
     { view: 'settlement', label: 'Settlement', icon: HandCoins },
     { view: 'categories', label: 'Categories', icon: Tag },
     { view: 'carpools', label: 'Carpools', icon: Car },
+    { view: 'grocery', label: 'Grocery', icon: ShoppingCart },
 ];
 
 const VIEW_LABELS: Record<View, string> = {
@@ -54,6 +56,7 @@ const VIEW_LABELS: Record<View, string> = {
     settlement: 'Settlement',
     categories: 'Categories',
     carpools: 'Carpools',
+    grocery: 'Grocery',
 };
 
 function useDarkMode() {
@@ -104,6 +107,10 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
         addCarpool,
         updateCarpool,
         removeCarpool,
+        addGroceryItem,
+        toggleGroceryItem,
+        removeGroceryItem,
+        clearCheckedGroceryItems,
     } = useTripStore(tripId);
 
     // Once hydrated, auto-join: claim existing member by name or add as new
@@ -276,6 +283,16 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
                                     onAdd={addCarpool}
                                     onUpdate={updateCarpool}
                                     onRemove={removeCarpool}
+                                />
+                            )}
+                            {view === 'grocery' && (
+                                <GroceryView
+                                    items={store.groceryItems}
+                                    currentUserName={currentUserName || undefined}
+                                    onAdd={addGroceryItem}
+                                    onToggle={toggleGroceryItem}
+                                    onRemove={removeGroceryItem}
+                                    onClearChecked={clearCheckedGroceryItems}
                                 />
                             )}
                         </>

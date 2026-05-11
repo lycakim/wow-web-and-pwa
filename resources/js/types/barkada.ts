@@ -1,6 +1,6 @@
 export type Category = string;
 
-export type View = 'home' | 'members' | 'budget' | 'expenses' | 'settlement' | 'categories' | 'carpools';
+export type View = 'home' | 'members' | 'budget' | 'expenses' | 'settlement' | 'categories' | 'carpools' | 'grocery';
 
 export interface Member {
     id: string;
@@ -53,6 +53,15 @@ export interface BarkadaStore {
     contingency: number; // fixed contingency amount on top of budget
     hiddenBuiltInCategories: string[]; // built-in category keys hidden by the user
     inactiveCategories: string[]; // category keys excluded from all calculations
+    groceryItems: GroceryItem[];
+}
+
+export interface GroceryItem {
+    id: string;
+    name: string;
+    checked: boolean;
+    addedByName?: string;
+    createdAt: string;
 }
 
 export interface Settlement {
