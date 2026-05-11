@@ -80,10 +80,10 @@ function formatPeso(amount: number): string {
     return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function MemberAvatar({ name, members, id }: { name: string; members: Member[]; id: string }) {
+function MemberAvatar({ name, members, id, size = 'md' }: { name: string; members: Member[]; id: string; size?: 'sm' | 'md' }) {
     return (
-        <Avatar className="size-7">
-            <AvatarFallback className={cn('text-xs font-bold text-white', avatarColor(members, id))}>
+        <Avatar className={size === 'sm' ? 'size-6' : 'size-8'}>
+            <AvatarFallback className={cn(size === 'sm' ? 'text-[10px]' : 'text-xs', 'font-bold text-white', avatarColor(members, id))}>
                 {getInitials(name)}
             </AvatarFallback>
         </Avatar>
@@ -129,6 +129,8 @@ export function SettlementView({ store }: SettlementViewProps) {
         );
     }
 
+    const activeCategoryKeys = allCategoryKeys.filter((cat) => (spendByCategory[cat] ?? 0) > 0);
+
     return (
         <div className="space-y-4 p-4">
             {/* Transactions needed */}
@@ -151,23 +153,27 @@ export function SettlementView({ store }: SettlementViewProps) {
                             {/* Mobile cards */}
                             <div className="divide-y sm:hidden">
                                 {settlements.map((s, i) => {
-                                    const from = memberById[s.fromId] ?? { id: s.fromId, name: '(Deleted)' };
-                                    const to = memberById[s.toId] ?? { id: s.toId, name: '(Deleted)' };
+                                    const from = memberById[s.fromId] ?? { id: s.fromId, name: '?' } as Member;
+                                    const to = memberById[s.toId] ?? { id: s.toId, name: '?' } as Member;
                                     return (
-                                        <div key={i} className="px-4 py-3">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div className="flex items-center gap-2 min-w-0">
+                                        <div key={i} className="px-4 py-4">
+                                            {/* Amount prominent at top */}
+                                            <p className="mb-3 text-center text-lg font-bold tabular-nums text-indigo-600 dark:text-indigo-400">
+                                                {formatPeso(s.amount)}
+                                            </p>
+                                            {/* From → To */}
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
                                                     <MemberAvatar name={from.name} members={members} id={from.id} />
-                                                    <span className="truncate text-sm font-medium">{from.name}</span>
+                                                    <span className="max-w-full truncate text-center text-xs font-medium">{from.name}</span>
+                                                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-950/40 dark:text-red-400">pays</span>
                                                 </div>
-                                                <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-                                                <div className="flex items-center gap-2 min-w-0">
+                                                <ArrowRight className="size-5 shrink-0 text-muted-foreground" />
+                                                <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
                                                     <MemberAvatar name={to.name} members={members} id={to.id} />
-                                                    <span className="truncate text-sm font-medium">{to.name}</span>
+                                                    <span className="max-w-full truncate text-center text-xs font-medium">{to.name}</span>
+                                                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-600 dark:bg-green-950/40 dark:text-green-400">receives</span>
                                                 </div>
-                                                <span className="shrink-0 font-bold tabular-nums text-indigo-600 dark:text-indigo-400">
-                                                    {formatPeso(s.amount)}
-                                                </span>
                                             </div>
                                         </div>
                                     );
@@ -186,8 +192,8 @@ export function SettlementView({ store }: SettlementViewProps) {
                                 </TableHeader>
                                 <TableBody>
                                     {settlements.map((s, i) => {
-                                        const from = memberById[s.fromId] ?? { id: s.fromId, name: '(Deleted)' };
-                                        const to = memberById[s.toId] ?? { id: s.toId, name: '(Deleted)' };
+                                        const from = memberById[s.fromId] ?? { id: s.fromId, name: '(Deleted)' } as Member;
+                                        const to = memberById[s.toId] ?? { id: s.toId, name: '(Deleted)' } as Member;
                                         return (
                                             <TableRow key={i}>
                                                 <TableCell className="pl-6">
@@ -214,13 +220,122 @@ export function SettlementView({ store }: SettlementViewProps) {
                 </CardContent>
             </Card>
 
+            {/* Member balances */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Balance per Member</CardTitle>
+                    <p className="text-sm text-muted-foreground">Fair share: {formatPeso(sharePerPerson)} each</p>
+                </CardHeader>
+                <CardContent className="px-0 pb-2">
+                    {/* Mobile list */}
+                    <div className="divide-y sm:hidden">
+                        {members.map((m) => {
+                            const paid = paidByMember[m.id] ?? 0;
+                            const net = paid - sharePerPerson;
+                            const isOwed = net > 0.005;
+                            const owes = net < -0.005;
+                            return (
+                                <div key={m.id} className="flex items-center gap-3 px-4 py-3">
+                                    <MemberAvatar name={m.name} members={members} id={m.id} />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-medium">{m.name}</p>
+                                        <p className="text-xs text-muted-foreground">Paid {formatPeso(paid)}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className={cn('text-sm font-bold tabular-nums', isOwed ? 'text-green-600 dark:text-green-400' : owes ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground')}>
+                                            {isOwed ? '+' : ''}{formatPeso(net)}
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            {isOwed ? 'gets back' : owes ? 'owes' : 'settled'}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {/* Desktop table */}
+                    <Table className="hidden sm:table">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="pl-6">Member</TableHead>
+                                <TableHead className="text-right">Paid</TableHead>
+                                <TableHead className="pr-6 text-right">Net</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {members.map((m) => {
+                                const paid = paidByMember[m.id] ?? 0;
+                                const net = paid - sharePerPerson;
+                                const isOwed = net > 0.005;
+                                const owes = net < -0.005;
+                                return (
+                                    <TableRow key={m.id}>
+                                        <TableCell className="pl-6">
+                                            <div className="flex items-center gap-2.5">
+                                                <MemberAvatar name={m.name} members={members} id={m.id} />
+                                                <span className="font-medium">{m.name}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right tabular-nums text-muted-foreground">{formatPeso(paid)}</TableCell>
+                                        <TableCell className={cn('pr-6 text-right font-semibold tabular-nums', isOwed ? 'text-green-600 dark:text-green-400' : owes ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground')}>
+                                            {isOwed ? '+' : ''}{formatPeso(net)}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                        <TableFooter>
+                            <TableRow>
+                                <TableCell className="pl-6">Total</TableCell>
+                                <TableCell className="text-right font-semibold tabular-nums">{formatPeso(totalSpend)}</TableCell>
+                                <TableCell className="pr-6" />
+                            </TableRow>
+                        </TableFooter>
+                    </Table>
+                </CardContent>
+            </Card>
+
             {/* Category breakdown */}
             <Card>
                 <CardHeader>
                     <CardTitle>Spend by Category</CardTitle>
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
-                    <Table>
+                    {/* Mobile list */}
+                    <div className="divide-y sm:hidden">
+                        {activeCategoryKeys.map((cat) => {
+                            const meta = allCategories[cat];
+                            const spent = spendByCategory[cat] ?? 0;
+                            const pct = totalSpend > 0 ? ((spent / totalSpend) * 100).toFixed(1) : '0';
+                            const barWidth = totalSpend > 0 ? (spent / totalSpend) * 100 : 0;
+                            return (
+                                <div key={cat} className="px-4 py-3">
+                                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                                        <Badge variant="outline" className={cn('border-0 text-xs', meta.bgClass, meta.textClass)}>
+                                            {meta.icon} {meta.label}
+                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold tabular-nums">{formatPeso(spent)}</span>
+                                            <span className="w-9 text-right text-xs text-muted-foreground">{pct}%</span>
+                                        </div>
+                                    </div>
+                                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                        <div
+                                            className="h-full rounded-full bg-indigo-500 transition-all"
+                                            style={{ width: `${barWidth}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        <div className="flex justify-between px-4 py-3 text-sm font-semibold">
+                            <span>Total</span>
+                            <span className="tabular-nums">{formatPeso(totalSpend)}</span>
+                        </div>
+                    </div>
+
+                    {/* Desktop table */}
+                    <Table className="hidden sm:table">
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="pl-6">Category</TableHead>
@@ -229,30 +344,28 @@ export function SettlementView({ store }: SettlementViewProps) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {allCategoryKeys
-                                .filter((cat) => (spendByCategory[cat] ?? 0) > 0)
-                                .map((cat) => {
-                                    const meta = allCategories[cat];
-                                    const spent = spendByCategory[cat] ?? 0;
-                                    const pct = totalSpend > 0 ? ((spent / totalSpend) * 100).toFixed(1) : '0';
+                            {activeCategoryKeys.map((cat) => {
+                                const meta = allCategories[cat];
+                                const spent = spendByCategory[cat] ?? 0;
+                                const pct = totalSpend > 0 ? ((spent / totalSpend) * 100).toFixed(1) : '0';
 
-                                    return (
-                                        <TableRow key={cat}>
-                                            <TableCell className="pl-6">
-                                                <Badge
-                                                    variant="outline"
-                                                    className={cn('border-0 text-xs', meta.bgClass, meta.textClass)}
-                                                >
-                                                    {meta.icon} {meta.label}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium tabular-nums">
-                                                {formatPeso(spent)}
-                                            </TableCell>
-                                            <TableCell className="pr-6 text-right text-muted-foreground">{pct}%</TableCell>
-                                        </TableRow>
-                                    );
-                                })}
+                                return (
+                                    <TableRow key={cat}>
+                                        <TableCell className="pl-6">
+                                            <Badge
+                                                variant="outline"
+                                                className={cn('border-0 text-xs', meta.bgClass, meta.textClass)}
+                                            >
+                                                {meta.icon} {meta.label}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right font-medium tabular-nums">
+                                            {formatPeso(spent)}
+                                        </TableCell>
+                                        <TableCell className="pr-6 text-right text-muted-foreground">{pct}%</TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                         <TableFooter>
                             <TableRow>

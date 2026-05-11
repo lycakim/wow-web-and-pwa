@@ -381,13 +381,13 @@ export function ExpensesView({ store, onAdd, onRemove, currentUserName }: Expens
                         </div>
                         <Button size="sm" onClick={() => setIsAdding(true)} className="shrink-0 gap-1.5 bg-indigo-600 hover:bg-indigo-700">
                             <Plus className="size-4" />
-                            Add Expense
+                            Add
                         </Button>
                     </CardHeader>
 
                     {/* Category filter */}
                     <CardContent className="pb-0">
-                        <div className="flex gap-2 overflow-x-auto pb-1">
+                        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                             <button
                                 onClick={() => setFilter('all')}
                                 className={cn(
@@ -424,7 +424,7 @@ export function ExpensesView({ store, onAdd, onRemove, currentUserName }: Expens
                             <div className="py-12 text-center">
                                 <p className="text-4xl">🧾</p>
                                 <p className="mt-2 text-sm font-medium">No expenses yet</p>
-                                <p className="text-xs text-muted-foreground">Tap Add Expense to get started</p>
+                                <p className="text-xs text-muted-foreground">Tap Add to get started</p>
                             </div>
                         ) : (
                             <>
@@ -436,28 +436,46 @@ export function ExpensesView({ store, onAdd, onRemove, currentUserName }: Expens
                                         const splitBadge = SPLIT_BADGE[expense.splitType] ?? SPLIT_BADGE.custom;
                                         const carpoolName = expense.carpoolId ? carpoolById[expense.carpoolId]?.name : null;
                                         return (
-                                            <div key={expense.id} className="flex items-start gap-3 px-4 py-3">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-medium text-sm truncate">{expense.description}</span>
-                                                        <Badge variant="outline" className={cn('border-0 text-xs shrink-0', meta.bgClass, meta.textClass)}>
-                                                            {meta.icon} {meta.shortLabel}
-                                                        </Badge>
+                                            <div key={expense.id} className="px-4 py-3">
+                                                <div className="flex items-center gap-3">
+                                                    {/* Category icon */}
+                                                    <div className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl text-xl', meta.bgClass)}>
+                                                        {meta.icon}
                                                     </div>
-                                                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                                                        {expense.splitType !== 'kkb' && <span>Paid by <span className="font-medium text-foreground">{payer?.name ?? 'Unknown'}</span></span>}
-                                                        {expense.loggedByName && <span>· by <span className="font-medium text-indigo-600 dark:text-indigo-400">{expense.loggedByName}</span></span>}
-                                                        <span>· {formatDate(expense.createdAt)}</span>
-                                                        <Badge variant="outline" className={cn('border-0 text-[10px] px-1.5 py-0', splitBadge.className)}>
-                                                            {carpoolName ?? splitBadge.label}
-                                                        </Badge>
+
+                                                    {/* Main content */}
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <p className="truncate text-sm font-semibold leading-snug">{expense.description}</p>
+                                                            <span className="shrink-0 text-sm font-bold tabular-nums">{formatPeso(expense.amount)}</span>
+                                                        </div>
+                                                        <div className="mt-0.5 flex items-center justify-between gap-2">
+                                                            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                                                                {expense.splitType !== 'kkb' && (
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        Paid by <span className="font-medium text-foreground">{payer?.name ?? 'Unknown'}</span>
+                                                                    </span>
+                                                                )}
+                                                                <span className="text-xs text-muted-foreground/50">·</span>
+                                                                <span className="text-xs text-muted-foreground">{formatDate(expense.createdAt)}</span>
+                                                                <Badge variant="outline" className={cn('border-0 px-1.5 py-0 text-[10px]', splitBadge.className)}>
+                                                                    {carpoolName ?? splitBadge.label}
+                                                                </Badge>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setDeleteTarget({ id: expense.id, description: expense.description })}
+                                                                className="shrink-0 flex size-7 items-center justify-center rounded-full text-muted-foreground/30 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                                                            >
+                                                                <Trash2 className="size-3.5" />
+                                                            </button>
+                                                        </div>
+                                                        {expense.loggedByName && (
+                                                            <p className="mt-0.5 text-[10px] text-muted-foreground/60">
+                                                                logged by <span className="font-medium text-indigo-600 dark:text-indigo-400">{expense.loggedByName}</span>
+                                                            </p>
+                                                        )}
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-1 shrink-0">
-                                                    <span className="font-semibold tabular-nums text-sm">{formatPeso(expense.amount)}</span>
-                                                    <Button size="icon" variant="ghost" className="size-9 text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget({ id: expense.id, description: expense.description })}>
-                                                        <Trash2 className="size-4" />
-                                                    </Button>
                                                 </div>
                                             </div>
                                         );
