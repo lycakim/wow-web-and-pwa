@@ -1,11 +1,15 @@
-// SW version — bump to force update on all clients
-const SW_VERSION = '2';
-console.log('[SW] version', SW_VERSION);
-
 import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 
 declare const self: ServiceWorkerGlobalScope;
+
+// Force immediate activation — skip waiting for old SW to die
+self.addEventListener('install', () => { self.skipWaiting(); });
+
+// Claim all open tabs immediately after activation
+self.addEventListener('activate', (event: ExtendableEvent) => {
+    event.waitUntil(self.clients.claim());
+});
 
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);

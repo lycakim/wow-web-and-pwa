@@ -134,9 +134,15 @@ Deno.serve(async (req) => {
         .select('id, endpoint, p256dh, auth')
         .eq('trip_id', notification.tripId);
 
-    if (error || !subscriptions?.length) {
+    if (error) {
+        console.error('[send-push] failed to fetch subscriptions:', error);
+        return new Response(JSON.stringify({ sent: 0, error: error.message }), { status: 200 });
+    }
+    if (!subscriptions?.length) {
+        console.log('[send-push] no subscriptions for trip', notification.tripId);
         return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
     }
+    console.log('[send-push] sending to', subscriptions.length, 'subscriptions for trip', notification.tripId);
 
     const pushPayload = JSON.stringify({
         title: notification.title,
@@ -160,6 +166,13 @@ Deno.serve(async (req) => {
                 const status = (err as { statusCode?: number }).statusCode;
                 if (status === 410 || status === 404) {
                     expired.push(sub.id);
+                } else {
+                    console.error('[send-push] sendNotification failed:', {
+                        endpoint: sub.endpoint.slice(0, 60),
+                        status,
+                        body: (err as { body?: string }).body,
+                        message: (err as Error).message,
+                    });
                 }
             }
         }),
