@@ -61,6 +61,8 @@ export interface GroceryItem {
     name: string;
     checked: boolean;
     addedByName?: string;
+    checkedByName?: string;
+    assignedToName?: string;
     createdAt: string;
 }
 
