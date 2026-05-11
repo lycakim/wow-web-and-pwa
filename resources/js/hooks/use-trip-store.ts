@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { generateTripCode } from '@/lib/trip-code';
 import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Expense, GroceryItem, Member, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useRef, useState } from 'react';
@@ -229,6 +230,12 @@ export function useTripStore(tripId: string) {
     }, [isHydrated, tripId]);
 
     // ── Trip ──────────────────────────────────────────────────────────────────
+
+    const regenerateTripCode = async (): Promise<string> => {
+        const newCode = generateTripCode();
+        await supabase.from('trips').update({ code: newCode }).eq('id', tripId);
+        return newCode;
+    };
 
     const updateTrip = async (trip: Trip) => {
         setStore((prev) => ({ ...prev, trip }));
@@ -468,6 +475,7 @@ export function useTripStore(tripId: string) {
     return {
         store,
         isHydrated,
+        regenerateTripCode,
         updateTrip,
         addMember,
         updateMember,

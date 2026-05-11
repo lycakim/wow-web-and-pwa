@@ -28,7 +28,7 @@ import {
 import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
-import { Car, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
+import { Car, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -90,6 +90,7 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
     const {
         store,
         isHydrated,
+        regenerateTripCode,
         updateTrip,
         addMember,
         updateMember,
@@ -140,7 +141,21 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
     }, [isHydrated, store.members, tripId]);
 
     // Read the saved trip code from localStorage if not passed directly
-    const displayCode = tripCode ?? localStorage.getItem(TRIP_CODE_KEY) ?? '';
+    const [displayCode, setDisplayCode] = useState(() => tripCode ?? localStorage.getItem(TRIP_CODE_KEY) ?? '');
+    const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+    const [regenerating, setRegenerating] = useState(false);
+
+    const handleRegenerateCode = async () => {
+        setRegenerating(true);
+        try {
+            const newCode = await regenerateTripCode();
+            localStorage.setItem(TRIP_CODE_KEY, newCode);
+            setDisplayCode(newCode);
+            setConfirmRegenerate(false);
+        } finally {
+            setRegenerating(false);
+        }
+    };
 
     return (
         <>
@@ -196,6 +211,39 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     </SidebarMenu>
+                    {/* Regenerate code button */}
+                    {!confirmRegenerate ? (
+                        <button
+                            type="button"
+                            onClick={() => setConfirmRegenerate(true)}
+                            className="mx-2 mb-1 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        >
+                            <RefreshCw className="size-3" />
+                            <span>Regenerate code</span>
+                        </button>
+                    ) : (
+                        <div className="mx-2 mb-1 rounded-md border bg-muted/50 p-2 text-xs">
+                            <p className="text-muted-foreground">Kicked members won't be able to rejoin with the old code.</p>
+                            <div className="mt-2 flex gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={handleRegenerateCode}
+                                    disabled={regenerating}
+                                    className="flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                                >
+                                    {regenerating ? <RefreshCw className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                                    Confirm
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmRegenerate(false)}
+                                    className="rounded-md px-2 py-1 text-muted-foreground hover:bg-muted transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </SidebarHeader>
 
                 <SidebarContent>
