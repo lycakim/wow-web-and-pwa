@@ -154,8 +154,8 @@ function ExpenseSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="bottom" className="h-[92dvh] overflow-y-auto rounded-t-2xl sm:side-right sm:h-full sm:max-w-md sm:rounded-none">
-                <SheetHeader>
+            <SheetContent side="bottom" className="flex max-h-[92svh] flex-col rounded-t-2xl">
+                <SheetHeader className="shrink-0">
                     <SheetTitle>Add Expense</SheetTitle>
                 </SheetHeader>
 
@@ -166,13 +166,13 @@ function ExpenseSheet({
                         <p className="mt-1 text-sm text-muted-foreground">You need at least one member before logging expenses.</p>
                     </div>
                 ) : (
-                    <div className="space-y-5 px-4 pb-6">
+                    <div className="flex-1 overflow-y-auto overscroll-contain">
+                    <div className="space-y-5 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
                         {/* Description */}
                         <div className="space-y-1.5">
                             <Label htmlFor="exp-desc">Description</Label>
                             <Input
                                 id="exp-desc"
-                                autoFocus
                                 value={form.description}
                                 onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                                 placeholder="e.g. Dinner at Kuya's Lechon"
@@ -340,6 +340,7 @@ function ExpenseSheet({
                         <Button onClick={submit} className="w-full bg-indigo-600 hover:bg-indigo-700">
                             Add Expense
                         </Button>
+                    </div>
                     </div>
                 )}
             </SheetContent>
