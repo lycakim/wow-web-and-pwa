@@ -106,13 +106,18 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
         removeCarpool,
     } = useTripStore(tripId);
 
-    // Auto-add user as a member once per trip per device
+    // Once hydrated, auto-join: claim existing member by name or add as new
     useEffect(() => {
         if (!isHydrated || !nameIsSet || !currentUserName) return;
         const joinedKey = `barkada-joined-${tripId}`;
         if (localStorage.getItem(joinedKey)) return;
-        localStorage.setItem(joinedKey, '1');
-        addMember(currentUserName);
+        const match = store.members.find((m) => m.name.toLowerCase() === currentUserName.toLowerCase());
+        if (match) {
+            localStorage.setItem(joinedKey, match.id);
+        } else {
+            localStorage.setItem(joinedKey, 'new');
+            addMember(currentUserName);
+        }
     }, [isHydrated, nameIsSet, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Read the saved trip code from localStorage if not passed directly
@@ -120,15 +125,19 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
 
     return (
         <>
-        {(!nameIsSet || editingName) && (
+        {isHydrated && (!nameIsSet || editingName) && (
             <UserSetup onSave={(n) => {
                 saveName(n);
                 setEditingName(false);
-                // If store already hydrated, add as member immediately
-                if (isHydrated) {
-                    const joinedKey = `barkada-joined-${tripId}`;
-                    if (!localStorage.getItem(joinedKey)) {
-                        localStorage.setItem(joinedKey, '1');
+                const joinedKey = `barkada-joined-${tripId}`;
+                if (!localStorage.getItem(joinedKey)) {
+                    const match = store.members.find((m) => m.name.toLowerCase() === n.toLowerCase());
+                    if (match) {
+                        // Name matches an existing member — claim them, no duplicate
+                        localStorage.setItem(joinedKey, match.id);
+                    } else {
+                        // New person — add as member
+                        localStorage.setItem(joinedKey, 'new');
                         addMember(n);
                     }
                 }

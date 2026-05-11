@@ -21,7 +21,7 @@ export function UserSetup({ onSave }: UserSetupProps) {
                     <div className="mb-3 flex justify-center text-4xl">👋</div>
                     <h2 className="text-lg font-bold">What's your name?</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Your barkada will see this when you log expenses.
+                        If you're already in the members list, use the same name to join as yourself.
                     </p>
                 </div>
 
