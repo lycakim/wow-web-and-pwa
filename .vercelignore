@@ -1,0 +1,9 @@
+app/
+bootstrap/
+config/
+database/
+public/
+resources/views/
+routes/
+storage/
+vendor/

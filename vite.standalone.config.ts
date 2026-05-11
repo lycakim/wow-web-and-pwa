@@ -54,7 +54,7 @@ export default defineConfig({
         outDir: 'standalone-dist',
         emptyOutDir: true,
         rollupOptions: {
-            input: resolve(__dirname, 'standalone.html'),
+            input: resolve(__dirname, 'index.html'),
         },
     },
     esbuild: {
