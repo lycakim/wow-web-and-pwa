@@ -43,6 +43,7 @@ type PendingOp =
     | { type: 'toggleGroceryItem'; id: string; checked: boolean; checkedByName: string | null }
     | { type: 'assignGroceryItem'; id: string; assignedToNames: string[] }
     | { type: 'removeGroceryItem'; id: string }
+    | { type: 'renameGroceryItem'; id: string; name: string }
     | { type: 'clearCheckedGroceryItems'; ids: string[] }
     | { type: 'regenerateTripCode'; code: string };
 
@@ -182,6 +183,9 @@ async function executeOp(op: PendingOp, tripId: string): Promise<void> {
             break;
         case 'removeGroceryItem':
             await supabase.from('grocery_items').delete().eq('id', op.id);
+            break;
+        case 'renameGroceryItem':
+            await supabase.from('grocery_items').update({ name: op.name }).eq('id', op.id);
             break;
         case 'clearCheckedGroceryItems':
             if (op.ids.length > 0) {
@@ -807,6 +811,16 @@ export function useTripStore(tripId: string) {
         );
     };
 
+    const renameGroceryItem = async (id: string, name: string) => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        setStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.map((i) => (i.id === id ? { ...i, name: trimmed } : i)) }));
+        await trySupabase(
+            async () => { await supabase.from('grocery_items').update({ name: trimmed }).eq('id', id); },
+            { type: 'renameGroceryItem', id, name: trimmed },
+        );
+    };
+
     const clearCheckedGroceryItems = async (section?: GrocerySection) => {
         const checkedIds = store.groceryItems
             .filter((i) => i.checked && (!section || (i.section ?? 'buy') === section))
@@ -858,6 +872,7 @@ export function useTripStore(tripId: string) {
         toggleGroceryItem,
         assignGroceryItem,
         removeGroceryItem,
+        renameGroceryItem,
         clearCheckedGroceryItems,
         clearAll,
     };

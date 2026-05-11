@@ -147,6 +147,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
         toggleGroceryItem,
         assignGroceryItem,
         removeGroceryItem,
+        renameGroceryItem,
         clearCheckedGroceryItems,
     } = useTripStore(tripId);
 
@@ -435,6 +436,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                                     onToggle={toggleGroceryItem}
                                     onAssign={assignGroceryItem}
                                     onRemove={removeGroceryItem}
+                                    onRename={renameGroceryItem}
                                     onClearChecked={clearCheckedGroceryItems}
                                 />
                             )}

@@ -15,8 +15,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import type { GroceryItem, GrocerySection, Member } from '@/types/barkada';
 import { GROCERY_SECTIONS } from '@/types/barkada';
-import { MoreVertical, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Pencil, Trash2, X, MoreVertical } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 // Must match the same palette and order as members-view.tsx
 const AVATAR_COLORS = [
@@ -81,10 +81,11 @@ interface GroceryViewProps {
     onToggle: (id: string, checkedByName?: string) => void;
     onAssign: (id: string, memberName: string) => void;
     onRemove: (id: string) => void;
+    onRename: (id: string, name: string) => void;
     onClearChecked: (section: GrocerySection) => void;
 }
 
-export function GroceryView({ items, members, currentUserName, onAdd, onToggle, onAssign, onRemove, onClearChecked }: GroceryViewProps) {
+export function GroceryView({ items, members, currentUserName, onAdd, onToggle, onAssign, onRemove, onRename, onClearChecked }: GroceryViewProps) {
     const [activeSection, setActiveSection] = useState<GrocerySection>('buy');
     const [input, setInput] = useState('');
 
@@ -195,6 +196,7 @@ export function GroceryView({ items, members, currentUserName, onAdd, onToggle, 
                                     onToggle={onToggle}
                                     onAssign={onAssign}
                                     onRemove={onRemove}
+                                    onRename={onRename}
                                 />
                             ))}
 
@@ -215,6 +217,7 @@ export function GroceryView({ items, members, currentUserName, onAdd, onToggle, 
                                     onToggle={onToggle}
                                     onAssign={onAssign}
                                     onRemove={onRemove}
+                                    onRename={onRename}
                                 />
                             ))}
                         </div>
@@ -232,12 +235,35 @@ interface GroceryRowProps {
     onToggle: (id: string, checkedByName?: string) => void;
     onAssign: (id: string, memberName: string) => void;
     onRemove: (id: string) => void;
+    onRename: (id: string, name: string) => void;
 }
 
-function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemove }: GroceryRowProps) {
+function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemove, onRename }: GroceryRowProps) {
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [animating, setAnimating] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [editValue, setEditValue] = useState(item.name);
+    const editInputRef = useRef<HTMLInputElement>(null);
     const assigned = item.assignedToNames ?? [];
+
+    useEffect(() => {
+        if (editing) {
+            setEditValue(item.name);
+            setTimeout(() => editInputRef.current?.select(), 0);
+        }
+    }, [editing, item.name]);
+
+    const saveEdit = () => {
+        if (editValue.trim() && editValue.trim() !== item.name) {
+            onRename(item.id, editValue.trim());
+        }
+        setEditing(false);
+    };
+
+    const cancelEdit = () => {
+        setEditValue(item.name);
+        setEditing(false);
+    };
     const hasAssigned = assigned.length > 0;
 
     const handleToggle = () => {
@@ -295,21 +321,54 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
 
                 {/* Name + added by */}
                 <div className="flex min-w-0 flex-1 flex-col">
-                    <span className={cn(
-                        'text-sm font-medium leading-snug transition-all duration-300',
-                        item.checked && 'line-through text-muted-foreground font-normal',
-                    )}>
-                        {item.name}
-                    </span>
-                    {item.addedByName && (
-                        <span className="text-[10px] text-muted-foreground/60 leading-tight">
-                            by {item.addedByName}
-                        </span>
+                    {editing ? (
+                        <div className="flex items-center gap-1.5">
+                            <Input
+                                ref={editInputRef}
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') saveEdit();
+                                    if (e.key === 'Escape') cancelEdit();
+                                }}
+                                className="h-7 px-2 text-sm py-0"
+                                autoFocus
+                            />
+                            <button
+                                type="button"
+                                onClick={saveEdit}
+                                disabled={!editValue.trim()}
+                                className="shrink-0 flex size-6 items-center justify-center rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+                            >
+                                <Check className="size-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={cancelEdit}
+                                className="shrink-0 flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
+                            >
+                                <X className="size-3.5" />
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <span className={cn(
+                                'text-sm font-medium leading-snug transition-all duration-300',
+                                item.checked && 'line-through text-muted-foreground font-normal',
+                            )}>
+                                {item.name}
+                            </span>
+                            {item.addedByName && (
+                                <span className="text-[10px] text-muted-foreground/60 leading-tight">
+                                    by {item.addedByName}
+                                </span>
+                            )}
+                        </>
                     )}
                 </div>
 
                 {/* Avatar stack — tap/click to reveal names */}
-                {(hasAssigned || item.checkedByName) && (
+                {!editing && (hasAssigned || item.checkedByName) && (
                     <Popover>
                         <PopoverTrigger asChild>
                             <button
@@ -364,7 +423,7 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                 )}
 
                 {/* Three-dot menu */}
-                <DropdownMenu>
+                {!editing && <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button
                             type="button"
@@ -375,6 +434,14 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                            onSelect={() => setEditing(true)}
+                            className="flex items-center gap-2.5 cursor-pointer"
+                        >
+                            <Pencil className="size-4" />
+                            Edit name
+                        </DropdownMenuItem>
+                        {members.length > 0 && !item.checked && <DropdownMenuSeparator />}
                         {members.length > 0 && !item.checked && (
                             <>
                                 <DropdownMenuLabel className="text-xs text-muted-foreground font-normal pb-1">
@@ -407,7 +474,7 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                             Delete
                         </DropdownMenuItem>
                     </DropdownMenuContent>
-                </DropdownMenu>
+                </DropdownMenu>}
             </div>
 
             <ConfirmDeleteDialog
