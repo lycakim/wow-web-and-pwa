@@ -8,6 +8,7 @@ import { ExpensesView } from '@/components/barkada/expenses-view';
 import { HomeView } from '@/components/barkada/home-view';
 import { MembersView } from '@/components/barkada/members-view';
 import { SettlementView } from '@/components/barkada/settlement-view';
+import { ConfirmDeleteDialog } from '@/components/barkada/confirm-delete-dialog';
 import { TripCodeBanner, TripLanding } from '@/components/barkada/trip-landing';
 import { UserSetup } from '@/components/barkada/user-setup';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -111,6 +112,8 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
     const [showBanner, setShowBanner] = useState(!!tripCode);
     const [editingName, setEditingName] = useState(false);
     const [removedFromTrip, setRemovedFromTrip] = useState(false);
+    const [confirmLeave, setConfirmLeave] = useState(false);
+    const [confirmSwitch, setConfirmSwitch] = useState(false);
     const { dark, toggle: toggleDark } = useDarkMode();
     const { name: currentUserName, saveName, isSet: nameIsSet } = useCurrentUser();
 
@@ -284,13 +287,13 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton onClick={onSwitch} tooltip={{ children: 'Visit another trip' }} className="text-muted-foreground">
+                            <SidebarMenuButton onClick={() => setConfirmSwitch(true)} tooltip={{ children: 'Visit another trip' }} className="text-muted-foreground">
                                 <ArrowLeftRight />
                                 <span>Switch Trip</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => onLeave(tripId)} tooltip={{ children: 'Leave & remove yourself from this trip' }} className="text-muted-foreground hover:text-destructive">
+                            <SidebarMenuButton onClick={() => setConfirmLeave(true)} tooltip={{ children: 'Leave & remove yourself from this trip' }} className="text-muted-foreground hover:text-destructive">
                                 <LogOut />
                                 <span>Leave Trip</span>
                             </SidebarMenuButton>
@@ -390,6 +393,25 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                 </main>
             </SidebarInset>
         </SidebarProvider>
+
+        <ConfirmDeleteDialog
+            open={confirmSwitch}
+            onOpenChange={setConfirmSwitch}
+            title="Switch Trip"
+            description="Go back to the landing page? You'll stay as a member and can rejoin with the same code."
+            confirmLabel="Switch"
+            confirmVariant="default"
+            onConfirm={onSwitch}
+        />
+        <ConfirmDeleteDialog
+            open={confirmLeave}
+            onOpenChange={setConfirmLeave}
+            title="Leave Trip"
+            description="Remove yourself from this trip? You won't appear as a member anymore. You can still rejoin with the code, but you'll be added as a new member."
+            confirmLabel="Leave Trip"
+            confirmVariant="destructive"
+            onConfirm={() => onLeave(tripId)}
+        />
         </>
     );
 }

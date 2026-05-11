@@ -6,10 +6,12 @@ interface ConfirmDeleteDialogProps {
     onOpenChange: (open: boolean) => void;
     title: string;
     description: string;
+    confirmLabel?: string;
+    confirmVariant?: 'destructive' | 'default';
     onConfirm: () => void;
 }
 
-export function ConfirmDeleteDialog({ open, onOpenChange, title, description, onConfirm }: ConfirmDeleteDialogProps) {
+export function ConfirmDeleteDialog({ open, onOpenChange, title, description, confirmLabel = 'Delete', confirmVariant = 'destructive', onConfirm }: ConfirmDeleteDialogProps) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
@@ -22,13 +24,13 @@ export function ConfirmDeleteDialog({ open, onOpenChange, title, description, on
                         Cancel
                     </Button>
                     <Button
-                        variant="destructive"
+                        variant={confirmVariant}
                         onClick={() => {
                             onConfirm();
                             onOpenChange(false);
                         }}
                     >
-                        Delete
+                        {confirmLabel}
                     </Button>
                 </DialogFooter>
             </DialogContent>
