@@ -1,3 +1,4 @@
+import { ConfirmDeleteDialog } from '@/components/barkada/confirm-delete-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,6 +28,7 @@ interface CategoriesDialogProps {
 
 export function CategoriesDialog({ open, onOpenChange, store, onAdd, onRemove }: CategoriesDialogProps) {
     const [icon, setIcon] = useState('');
+    const [deleteTarget, setDeleteTarget] = useState<{ key: string; label: string } | null>(null);
     const [name, setName] = useState('');
     const [error, setError] = useState('');
 
@@ -115,7 +117,7 @@ export function CategoriesDialog({ open, onOpenChange, store, onAdd, onRemove }:
                                             variant="ghost"
                                             className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
                                             disabled={!canDelete}
-                                            onClick={() => onRemove(key)}
+                                            onClick={() => setDeleteTarget({ key, label: meta.label })}
                                         >
                                             <Trash2 className="size-4" />
                                         </Button>
@@ -179,5 +181,12 @@ export function CategoriesDialog({ open, onOpenChange, store, onAdd, onRemove }:
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        <ConfirmDeleteDialog
+            open={!!deleteTarget}
+            onOpenChange={(open) => !open && setDeleteTarget(null)}
+            title="Delete Category"
+            description={`Delete "${deleteTarget?.label}"? This cannot be undone.`}
+            onConfirm={() => { if (deleteTarget) onRemove(deleteTarget.key); }}
+        />
     );
 }

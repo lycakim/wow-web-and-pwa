@@ -1,3 +1,4 @@
+import { ConfirmDeleteDialog } from '@/components/barkada/confirm-delete-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -166,6 +167,7 @@ interface GroceryRowProps {
 
 function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemove }: GroceryRowProps) {
     const [showAssign, setShowAssign] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const assigned = item.assignedToNames ?? [];
     const hasAssigned = assigned.length > 0;
 
@@ -209,7 +211,7 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                 {/* Delete */}
                 <button
                     type="button"
-                    onClick={() => onRemove(item.id)}
+                    onClick={() => setConfirmDelete(true)}
                     className="shrink-0 text-muted-foreground/40 hover:text-destructive transition-colors"
                 >
                     <Trash2 className="size-4" />
@@ -282,6 +284,13 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                     })}
                 </div>
             )}
+            <ConfirmDeleteDialog
+                open={confirmDelete}
+                onOpenChange={setConfirmDelete}
+                title="Delete Item"
+                description={`Delete "${item.name}"? This cannot be undone.`}
+                onConfirm={() => onRemove(item.id)}
+            />
         </div>
     );
 }

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { cn } from '@/lib/utils';
 import type { BarkadaStore, Carpool, Category, CategoryMeta, Expense, Member } from '@/types/barkada';
 import { getAllCategories, getAllCategoryKeys, getCategoryMeta } from '@/types/barkada';
+import { ConfirmDeleteDialog } from '@/components/barkada/confirm-delete-dialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -356,6 +357,7 @@ const SPLIT_BADGE: Record<string, { label: string; className: string }> = {
 export function ExpensesView({ store, onAdd, onRemove, currentUserName }: ExpensesViewProps) {
     const [isAdding, setIsAdding] = useState(false);
     const [filter, setFilter] = useState<Category | 'all'>('all');
+    const [deleteTarget, setDeleteTarget] = useState<{ id: string; description: string } | null>(null);
     const { members, expenses, carpools } = store;
     const allCategories = getAllCategories(store);
     const allCategoryKeys = getAllCategoryKeys(store);
@@ -453,7 +455,7 @@ export function ExpensesView({ store, onAdd, onRemove, currentUserName }: Expens
                                                 </div>
                                                 <div className="flex items-center gap-1 shrink-0">
                                                     <span className="font-semibold tabular-nums text-sm">{formatPeso(expense.amount)}</span>
-                                                    <Button size="icon" variant="ghost" className="size-9 text-muted-foreground hover:text-destructive" onClick={() => onRemove(expense.id)}>
+                                                    <Button size="icon" variant="ghost" className="size-9 text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget({ id: expense.id, description: expense.description })}>
                                                         <Trash2 className="size-4" />
                                                     </Button>
                                                 </div>
@@ -511,7 +513,7 @@ export function ExpensesView({ store, onAdd, onRemove, currentUserName }: Expens
                                                     </TableCell>
                                                     <TableCell className="pr-6 text-right font-semibold tabular-nums">{formatPeso(expense.amount)}</TableCell>
                                                     <TableCell className="pr-4 text-right">
-                                                        <Button size="icon" variant="ghost" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => onRemove(expense.id)}>
+                                                        <Button size="icon" variant="ghost" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget({ id: expense.id, description: expense.description })}>
                                                             <Trash2 className="size-4" />
                                                         </Button>
                                                     </TableCell>
@@ -533,6 +535,13 @@ export function ExpensesView({ store, onAdd, onRemove, currentUserName }: Expens
                 </Card>
             </div>
 
+            <ConfirmDeleteDialog
+                open={!!deleteTarget}
+                onOpenChange={(open) => !open && setDeleteTarget(null)}
+                title="Delete Expense"
+                description={`Delete "${deleteTarget?.description}"? This cannot be undone.`}
+                onConfirm={() => { if (deleteTarget) onRemove(deleteTarget.id); }}
+            />
             <ExpenseSheet
                 members={members}
                 carpools={carpools}

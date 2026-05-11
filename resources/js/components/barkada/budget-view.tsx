@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDeleteDialog } from '@/components/barkada/confirm-delete-dialog';
 import { getSpendByCategory, getTotalBudget, getTotalSpend } from '@/hooks/use-barkada-store';
 import { cn } from '@/lib/utils';
 import type { BarkadaStore, BudgetItem, Category, Member } from '@/types/barkada';
@@ -223,6 +224,7 @@ function BudgetItemDialog({
 export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer, onSetContingency }: BudgetViewProps) {
     const [addOpen, setAddOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<BudgetItem | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<BudgetItem | null>(null);
 
     const { budgetItems, budgetBuffer, contingency } = store;
     const activeExpenses = getActiveExpenses(store);
@@ -312,7 +314,7 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                                                             size="icon"
                                                             variant="ghost"
                                                             className="size-8 text-muted-foreground hover:text-destructive"
-                                                            onClick={() => onRemove(item.id)}
+                                                            onClick={() => setDeleteTarget(item)}
                                                         >
                                                             <Trash2 className="size-4" />
                                                         </Button>
@@ -594,6 +596,13 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                     if (editTarget) onUpdate(editTarget.id, name, category, amount, carpoolId);
                     setEditTarget(null);
                 }}
+            />
+            <ConfirmDeleteDialog
+                open={!!deleteTarget}
+                onOpenChange={(open) => !open && setDeleteTarget(null)}
+                title="Delete Budget Item"
+                description={`Delete "${deleteTarget?.name}"? This cannot be undone.`}
+                onConfirm={() => { if (deleteTarget) onRemove(deleteTarget.id); }}
             />
         </>
     );
