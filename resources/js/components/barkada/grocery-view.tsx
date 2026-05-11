@@ -50,7 +50,7 @@ export function GroceryView({ items, members, currentUserName, onAdd, onToggle, 
                         type="button"
                         onClick={() => setActiveSection(s.key)}
                         className={cn(
-                            'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition-colors',
+                            'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-sm font-medium transition-colors',
                             activeSection === s.key
                                 ? 'bg-background shadow-sm text-foreground'
                                 : 'text-muted-foreground hover:text-foreground',
