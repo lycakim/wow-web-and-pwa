@@ -38,6 +38,8 @@ export default defineConfig({
             },
             workbox: {
                 globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
+                navigateFallback: '/index-shared.html',
+                navigateFallbackDenylist: [/^\/api\//],
             },
         }),
     ],
@@ -46,6 +48,7 @@ export default defineConfig({
             '@': resolve(__dirname, 'resources/js'),
         },
     },
+    publicDir: 'public',
     build: {
         outDir: 'shared-dist',
         emptyOutDir: true,
