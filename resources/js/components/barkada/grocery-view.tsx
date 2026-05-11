@@ -1,11 +1,19 @@
 import { ConfirmDeleteDialog } from '@/components/barkada/confirm-delete-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { GroceryItem, GrocerySection, Member } from '@/types/barkada';
 import { GROCERY_SECTIONS } from '@/types/barkada';
-import { Trash2, UserRound, X } from 'lucide-react';
+import { MoreVertical, Trash2, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 
 interface GroceryViewProps {
@@ -170,7 +178,6 @@ interface GroceryRowProps {
 }
 
 function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemove }: GroceryRowProps) {
-    const [showAssign, setShowAssign] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [animating, setAnimating] = useState(false);
     const assigned = item.assignedToNames ?? [];
@@ -226,103 +233,96 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
 
                 {/* Name */}
                 <span className={cn(
-                    'flex-1 text-sm transition-all duration-300',
-                    item.checked && 'line-through text-muted-foreground',
+                    'flex-1 text-sm font-medium transition-all duration-300',
+                    item.checked && 'line-through text-muted-foreground font-normal',
                 )}>
                     {item.name}
                 </span>
 
-                {/* Assign toggle (unchecked only, when members exist) */}
-                {!item.checked && members.length > 0 && (
-                    <button
-                        type="button"
-                        onClick={() => setShowAssign((v) => !v)}
-                        className={cn(
-                            'shrink-0 transition-colors',
-                            hasAssigned ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground/40 hover:text-indigo-600',
+                {/* Three-dot menu */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            className="shrink-0 flex size-7 items-center justify-center rounded-full text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-colors"
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                        >
+                            <MoreVertical className="size-4" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                        {members.length > 0 && !item.checked && (
+                            <>
+                                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal pb-1">
+                                    Assign to
+                                </DropdownMenuLabel>
+                                {members.map((m) => {
+                                    const isSelected = assigned.includes(m.name);
+                                    return (
+                                        <DropdownMenuItem
+                                            key={m.id}
+                                            onSelect={(e) => { e.preventDefault(); onAssign(item.id, m.name); }}
+                                            className="flex items-center justify-between gap-2 cursor-pointer"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <span className={cn(
+                                                    'flex size-4 items-center justify-center rounded-full border text-[9px]',
+                                                    isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-muted-foreground/30',
+                                                )}>
+                                                    {isSelected && '✓'}
+                                                </span>
+                                                {m.name}
+                                            </span>
+                                        </DropdownMenuItem>
+                                    );
+                                })}
+                                <DropdownMenuSeparator />
+                            </>
                         )}
-                        title="Assign to members"
-                    >
-                        <UserRound className="size-4" />
-                    </button>
-                )}
-
-                {/* Delete */}
-                <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className="shrink-0 text-muted-foreground/40 hover:text-destructive transition-colors"
-                >
-                    <Trash2 className="size-4" />
-                </button>
+                        <DropdownMenuItem
+                            onSelect={() => setConfirmDelete(true)}
+                            className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                        >
+                            <Trash2 className="size-4 mr-2" />
+                            Delete
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
-            {/* Meta: added by · assigned to · checked by */}
+            {/* Meta badges: added by · assigned to · checked by */}
             {(item.addedByName || hasAssigned || item.checkedByName) && (
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-8">
+                <div className="mt-2 flex flex-wrap gap-1.5 pl-10">
                     {item.addedByName && (
-                        <span className="text-[10px] text-muted-foreground">
-                            Added by <span className="font-medium">{item.addedByName}</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                            <span>✏️</span>
+                            <span>{item.addedByName}</span>
                         </span>
                     )}
-                    {item.addedByName && (hasAssigned || item.checkedByName) && (
-                        <span className="text-[10px] text-muted-foreground">·</span>
-                    )}
-                    {hasAssigned && (
-                        <span className="text-[10px] text-muted-foreground">
-                            For{' '}
-                            {assigned.map((name, i) => (
-                                <span key={name}>
-                                    <span className="font-medium text-indigo-600 dark:text-indigo-400">{name}</span>
-                                    {i < assigned.length - 1 && ', '}
-                                </span>
-                            ))}
+                    {hasAssigned && assigned.map((name) => (
+                        <span key={name} className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                            <span>👤</span>
+                            <span>{name}</span>
+                            {!item.checked && (
+                                <button
+                                    type="button"
+                                    onClick={() => onAssign(item.id, name)}
+                                    className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity"
+                                >
+                                    <X className="size-2.5" />
+                                </button>
+                            )}
                         </span>
-                    )}
-                    {hasAssigned && item.checkedByName && (
-                        <span className="text-[10px] text-muted-foreground">·</span>
-                    )}
+                    ))}
                     {item.checkedByName && (
-                        <span className="text-[10px] text-muted-foreground">
-                            Checked by <span className="font-medium">{item.checkedByName}</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                            <span>✅</span>
+                            <span>{item.checkedByName}</span>
                         </span>
                     )}
                 </div>
             )}
 
-            {/* Assign picker */}
-            {showAssign && !item.checked && (
-                <div className="mt-2 flex flex-wrap gap-1 pl-8">
-                    {hasAssigned && assigned.map((n) => (
-                        <button
-                            key={n}
-                            type="button"
-                            onClick={() => onAssign(item.id, n)}
-                            className="flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[11px] text-white hover:bg-indigo-700 transition-colors"
-                        >
-                            <X className="size-3" /> {n}
-                        </button>
-                    ))}
-                    {members.map((m) => {
-                        const isSelected = assigned.includes(m.name);
-                        return (
-                            <button
-                                key={m.id}
-                                type="button"
-                                onClick={() => onAssign(item.id, m.name)}
-                                className={cn(
-                                    'rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors',
-                                    isSelected
-                                        ? 'bg-indigo-600 text-white'
-                                        : 'bg-muted text-muted-foreground hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300',
-                                )}
-                            >
-                                {isSelected ? `✓ ${m.name}` : m.name}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
             <ConfirmDeleteDialog
                 open={confirmDelete}
                 onOpenChange={setConfirmDelete}
