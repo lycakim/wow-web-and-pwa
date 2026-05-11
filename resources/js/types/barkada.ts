@@ -62,7 +62,7 @@ export interface GroceryItem {
     checked: boolean;
     addedByName?: string;
     checkedByName?: string;
-    assignedToName?: string;
+    assignedToNames?: string[];
     createdAt: string;
 }
 

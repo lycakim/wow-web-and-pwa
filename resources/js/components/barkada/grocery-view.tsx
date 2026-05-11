@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { GroceryItem, Member } from '@/types/barkada';
-import { Check, ShoppingCart, Trash2, UserRound, X } from 'lucide-react';
+import { Check, ShoppingCart, Trash2, UserRound } from 'lucide-react';
 import { useState } from 'react';
 
 interface GroceryViewProps {
@@ -12,7 +12,7 @@ interface GroceryViewProps {
     currentUserName?: string;
     onAdd: (name: string, addedByName?: string) => void;
     onToggle: (id: string, checkedByName?: string) => void;
-    onAssign: (id: string, assignedToName: string | undefined) => void;
+    onAssign: (id: string, memberName: string) => void;
     onRemove: (id: string) => void;
     onClearChecked: () => void;
 }
@@ -68,7 +68,6 @@ export function GroceryView({ items, members, currentUserName, onAdd, onToggle, 
                         </div>
                     ) : (
                         <div className="space-y-1">
-                            {/* Unchecked items */}
                             {unchecked.map((item) => (
                                 <GroceryRow
                                     key={item.id}
@@ -81,7 +80,6 @@ export function GroceryView({ items, members, currentUserName, onAdd, onToggle, 
                                 />
                             ))}
 
-                            {/* Divider if both lists have items */}
                             {unchecked.length > 0 && checked.length > 0 && (
                                 <div className="flex items-center gap-2 py-1">
                                     <div className="h-px flex-1 bg-border" />
@@ -90,7 +88,6 @@ export function GroceryView({ items, members, currentUserName, onAdd, onToggle, 
                                 </div>
                             )}
 
-                            {/* Checked items */}
                             {checked.map((item) => (
                                 <GroceryRow
                                     key={item.id}
@@ -115,15 +112,18 @@ interface GroceryRowProps {
     members: Member[];
     currentUserName?: string;
     onToggle: (id: string, checkedByName?: string) => void;
-    onAssign: (id: string, assignedToName: string | undefined) => void;
+    onAssign: (id: string, memberName: string) => void;
     onRemove: (id: string) => void;
 }
 
 function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemove }: GroceryRowProps) {
     const [showAssign, setShowAssign] = useState(false);
+    const assigned = item.assignedToNames ?? [];
+    const hasAssigned = assigned.length > 0;
 
     return (
-        <div className={cn('rounded-lg px-3 py-2 transition-colors', item.checked ? 'opacity-50' : 'hover:bg-muted/50')}>
+        <div className={cn('rounded-lg px-3 py-2 transition-colors', item.checked ? 'opacity-60' : 'hover:bg-muted/50')}>
+            {/* Main row */}
             <div className="flex items-center gap-3">
                 {/* Checkbox */}
                 <button
@@ -144,35 +144,21 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                     {item.name}
                 </span>
 
-                {/* Assign button (only on unchecked items) */}
+                {/* Assign toggle button (unchecked only) */}
                 {!item.checked && members.length > 0 && (
                     <button
                         type="button"
                         onClick={() => setShowAssign((v) => !v)}
                         className={cn(
                             'shrink-0 transition-colors',
-                            item.assignedToName
+                            hasAssigned
                                 ? 'text-indigo-600 dark:text-indigo-400'
                                 : 'text-muted-foreground/40 hover:text-indigo-600',
                         )}
-                        title="Assign to member"
+                        title="Assign to members"
                     >
                         <UserRound className="size-4" />
                     </button>
-                )}
-
-                {/* Added by / assigned to badge */}
-                {item.assignedToName && !item.checked && (
-                    <span className="shrink-0 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                        → {item.assignedToName}
-                    </span>
-                )}
-
-                {/* Added by badge (when not assigned) */}
-                {item.addedByName && !item.assignedToName && !item.checked && (
-                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                        {item.addedByName}
-                    </span>
                 )}
 
                 {/* Delete */}
@@ -185,40 +171,60 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                 </button>
             </div>
 
-            {/* Checked-by attribution */}
-            {item.checked && item.checkedByName && (
-                <p className="mt-0.5 pl-8 text-[10px] text-muted-foreground">
-                    Checked by {item.checkedByName}
-                </p>
+            {/* Meta row: added by · assigned to · checked by */}
+            {(item.addedByName || hasAssigned || item.checkedByName) && (
+                <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-8">
+                    {item.addedByName && (
+                        <span className="text-[10px] text-muted-foreground">
+                            Added by <span className="font-medium">{item.addedByName}</span>
+                        </span>
+                    )}
+                    {item.addedByName && (hasAssigned || item.checkedByName) && (
+                        <span className="text-[10px] text-muted-foreground">·</span>
+                    )}
+                    {hasAssigned && (
+                        <span className="text-[10px] text-muted-foreground">
+                            For{' '}
+                            {assigned.map((name, i) => (
+                                <span key={name}>
+                                    <span className="font-medium text-indigo-600 dark:text-indigo-400">{name}</span>
+                                    {i < assigned.length - 1 && ', '}
+                                </span>
+                            ))}
+                        </span>
+                    )}
+                    {hasAssigned && item.checkedByName && (
+                        <span className="text-[10px] text-muted-foreground">·</span>
+                    )}
+                    {item.checkedByName && (
+                        <span className="text-[10px] text-muted-foreground">
+                            Checked by <span className="font-medium">{item.checkedByName}</span>
+                        </span>
+                    )}
+                </div>
             )}
 
-            {/* Assign picker */}
+            {/* Assign picker (multi-select toggle) */}
             {showAssign && !item.checked && (
                 <div className="mt-2 flex flex-wrap gap-1 pl-8">
-                    {item.assignedToName && (
-                        <button
-                            type="button"
-                            onClick={() => { onAssign(item.id, undefined); setShowAssign(false); }}
-                            className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                        >
-                            <X className="size-3" /> Unassign
-                        </button>
-                    )}
-                    {members.map((m) => (
-                        <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => { onAssign(item.id, m.name); setShowAssign(false); }}
-                            className={cn(
-                                'rounded-full px-2 py-0.5 text-[11px] transition-colors',
-                                item.assignedToName === m.name
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'bg-muted text-muted-foreground hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300',
-                            )}
-                        >
-                            {m.name}
-                        </button>
-                    ))}
+                    {members.map((m) => {
+                        const isSelected = assigned.includes(m.name);
+                        return (
+                            <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => onAssign(item.id, m.name)}
+                                className={cn(
+                                    'rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors',
+                                    isSelected
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'bg-muted text-muted-foreground hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300',
+                                )}
+                            >
+                                {isSelected ? `✓ ${m.name}` : m.name}
+                            </button>
+                        );
+                    })}
                 </div>
             )}
         </div>

@@ -80,7 +80,7 @@ function mapGroceryItem(row: Record<string, unknown>): GroceryItem {
         createdAt: row.created_at as string,
         ...(row.added_by_name ? { addedByName: row.added_by_name as string } : {}),
         ...(row.checked_by_name ? { checkedByName: row.checked_by_name as string } : {}),
-        ...(row.assigned_to_name ? { assignedToName: row.assigned_to_name as string } : {}),
+        ...(row.assigned_to_names ? { assignedToNames: row.assigned_to_names as string[] } : {}),
     };
 }
 
@@ -432,12 +432,18 @@ export function useTripStore(tripId: string) {
         await supabase.from('grocery_items').update({ checked, checked_by_name: checkedByNameValue }).eq('id', id);
     };
 
-    const assignGroceryItem = async (id: string, assignedToName: string | undefined) => {
+    const assignGroceryItem = async (id: string, memberName: string) => {
+        const item = store.groceryItems.find((i) => i.id === id);
+        if (!item) return;
+        const current = item.assignedToNames ?? [];
+        const assignedToNames = current.includes(memberName)
+            ? current.filter((n) => n !== memberName)
+            : [...current, memberName];
         setStore((prev) => ({
             ...prev,
-            groceryItems: prev.groceryItems.map((i) => (i.id === id ? { ...i, assignedToName } : i)),
+            groceryItems: prev.groceryItems.map((i) => (i.id === id ? { ...i, assignedToNames } : i)),
         }));
-        await supabase.from('grocery_items').update({ assigned_to_name: assignedToName ?? null }).eq('id', id);
+        await supabase.from('grocery_items').update({ assigned_to_names: assignedToNames }).eq('id', id);
     };
 
     const removeGroceryItem = async (id: string) => {

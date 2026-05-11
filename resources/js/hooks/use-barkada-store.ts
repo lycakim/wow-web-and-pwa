@@ -346,12 +346,17 @@ export function useBarkadaStore() {
         }));
     };
 
-    const assignGroceryItem = (id: string, assignedToName: string | undefined) => {
+    const assignGroceryItem = (id: string, memberName: string) => {
         updateStore((prev) => ({
             ...prev,
-            groceryItems: prev.groceryItems.map((item) =>
-                item.id === id ? { ...item, assignedToName } : item,
-            ),
+            groceryItems: prev.groceryItems.map((item) => {
+                if (item.id !== id) return item;
+                const current = item.assignedToNames ?? [];
+                const assignedToNames = current.includes(memberName)
+                    ? current.filter((n) => n !== memberName)
+                    : [...current, memberName];
+                return { ...item, assignedToNames };
+            }),
         }));
     };
 
