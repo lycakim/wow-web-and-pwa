@@ -10,11 +10,55 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { GroceryItem, GrocerySection, Member } from '@/types/barkada';
 import { GROCERY_SECTIONS } from '@/types/barkada';
-import { MoreVertical, Trash2, UserRound, X } from 'lucide-react';
+import { MoreVertical, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+
+const AVATAR_COLORS = [
+    'bg-violet-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500',
+    'bg-rose-500', 'bg-cyan-500', 'bg-pink-500', 'bg-orange-500',
+    'bg-teal-500', 'bg-indigo-500',
+];
+
+function getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+}
+
+function getAvatarColor(name: string): string {
+    const sum = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+}
+
+function Avatar({ name, size = 'md', ring = false }: { name: string; size?: 'sm' | 'md'; ring?: boolean }) {
+    return (
+        <TooltipProvider delayDuration={200}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span
+                        className={cn(
+                            'inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white select-none',
+                            getAvatarColor(name),
+                            size === 'sm' ? 'size-5 text-[9px]' : 'size-6 text-[10px]',
+                            ring && 'ring-2 ring-background',
+                        )}
+                    >
+                        {getInitials(name)}
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                    {name}
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
+}
 
 interface GroceryViewProps {
     items: GroceryItem[];
@@ -191,13 +235,18 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
         onToggle(item.id, currentUserName);
     };
 
+    // Show max 3 avatars, then overflow count
+    const MAX_AVATARS = 3;
+    const visibleAssigned = assigned.slice(0, MAX_AVATARS);
+    const overflowCount = assigned.length - MAX_AVATARS;
+
     return (
         <div className={cn(
-            'rounded-lg px-3 py-2.5 transition-colors',
-            item.checked ? 'opacity-60' : 'hover:bg-muted/50',
+            'rounded-lg px-3 py-2 transition-colors',
+            item.checked ? 'opacity-55' : 'hover:bg-muted/50',
             animating && 'grocery-check-flash',
         )}>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
                 {/* Checkbox */}
                 <button
                     type="button"
@@ -231,26 +280,70 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                     )}
                 </button>
 
-                {/* Name */}
-                <span className={cn(
-                    'flex-1 text-sm font-medium transition-all duration-300',
-                    item.checked && 'line-through text-muted-foreground font-normal',
-                )}>
-                    {item.name}
-                </span>
+                {/* Name + added by */}
+                <div className="flex min-w-0 flex-1 flex-col">
+                    <span className={cn(
+                        'text-sm font-medium leading-snug transition-all duration-300',
+                        item.checked && 'line-through text-muted-foreground font-normal',
+                    )}>
+                        {item.name}
+                    </span>
+                    {item.addedByName && (
+                        <span className="text-[10px] text-muted-foreground/60 leading-tight">
+                            by {item.addedByName}
+                        </span>
+                    )}
+                </div>
+
+                {/* Avatar stack: assigned members + checked-by */}
+                {(hasAssigned || item.checkedByName) && (
+                    <div className="flex shrink-0 items-center">
+                        {/* Assigned avatars (stacked) */}
+                        {hasAssigned && (
+                            <div className="flex items-center -space-x-1.5">
+                                {visibleAssigned.map((name) => (
+                                    <Avatar key={name} name={name} ring />
+                                ))}
+                                {overflowCount > 0 && (
+                                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground ring-2 ring-background">
+                                        +{overflowCount}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                        {/* Checked-by avatar (green tinted, only when checked) */}
+                        {item.checkedByName && (
+                            <TooltipProvider delayDuration={200}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className={cn(
+                                            'inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white ring-2 ring-background bg-emerald-500',
+                                            hasAssigned && 'ml-1',
+                                        )}>
+                                            ✓
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">
+                                        Checked by {item.checkedByName}
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                    </div>
+                )}
 
                 {/* Three-dot menu */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button
                             type="button"
-                            className="shrink-0 flex size-7 items-center justify-center rounded-full text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-colors"
+                            className="shrink-0 flex size-7 items-center justify-center rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors"
                             style={{ WebkitTapHighlightColor: 'transparent' }}
                         >
                             <MoreVertical className="size-4" />
                         </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuContent align="end" className="w-48">
                         {members.length > 0 && !item.checked && (
                             <>
                                 <DropdownMenuLabel className="text-xs text-muted-foreground font-normal pb-1">
@@ -262,17 +355,13 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                                         <DropdownMenuItem
                                             key={m.id}
                                             onSelect={(e) => { e.preventDefault(); onAssign(item.id, m.name); }}
-                                            className="flex items-center justify-between gap-2 cursor-pointer"
+                                            className="flex items-center gap-2.5 cursor-pointer"
                                         >
-                                            <span className="flex items-center gap-2">
-                                                <span className={cn(
-                                                    'flex size-4 items-center justify-center rounded-full border text-[9px]',
-                                                    isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-muted-foreground/30',
-                                                )}>
-                                                    {isSelected && '✓'}
-                                                </span>
-                                                {m.name}
-                                            </span>
+                                            <Avatar name={m.name} size="sm" />
+                                            <span className="flex-1 text-sm">{m.name}</span>
+                                            {isSelected && (
+                                                <span className="text-indigo-600 text-xs font-semibold">✓</span>
+                                            )}
                                         </DropdownMenuItem>
                                     );
                                 })}
@@ -289,39 +378,6 @@ function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemo
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
-
-            {/* Meta badges: added by · assigned to · checked by */}
-            {(item.addedByName || hasAssigned || item.checkedByName) && (
-                <div className="mt-2 flex flex-wrap gap-1.5 pl-10">
-                    {item.addedByName && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                            <span>✏️</span>
-                            <span>{item.addedByName}</span>
-                        </span>
-                    )}
-                    {hasAssigned && assigned.map((name) => (
-                        <span key={name} className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
-                            <span>👤</span>
-                            <span>{name}</span>
-                            {!item.checked && (
-                                <button
-                                    type="button"
-                                    onClick={() => onAssign(item.id, name)}
-                                    className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity"
-                                >
-                                    <X className="size-2.5" />
-                                </button>
-                            )}
-                        </span>
-                    ))}
-                    {item.checkedByName && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                            <span>✅</span>
-                            <span>{item.checkedByName}</span>
-                        </span>
-                    )}
-                </div>
-            )}
 
             <ConfirmDeleteDialog
                 open={confirmDelete}
