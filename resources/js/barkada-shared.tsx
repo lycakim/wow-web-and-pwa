@@ -24,6 +24,7 @@ import {
     SidebarMenuItem,
     SidebarProvider,
     SidebarTrigger,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
@@ -77,6 +78,32 @@ function useDarkMode() {
     };
 
     return { dark, toggle };
+}
+
+function NavMenu({ view, setView }: { view: View; setView: (v: View) => void }) {
+    const { setOpenMobile, isMobile } = useSidebar();
+
+    const handleNav = (v: View) => {
+        setView(v);
+        if (isMobile) setOpenMobile(false);
+    };
+
+    return (
+        <SidebarMenu>
+            {NAV_ITEMS.map(({ view: itemView, label, icon: Icon }) => (
+                <SidebarMenuItem key={itemView}>
+                    <SidebarMenuButton
+                        isActive={view === itemView}
+                        tooltip={{ children: label }}
+                        onClick={() => handleNav(itemView)}
+                    >
+                        <Icon />
+                        <span>{label}</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            ))}
+        </SidebarMenu>
+    );
 }
 
 function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; tripCode: string | null; onSwitch: () => void; onLeave: (id: string) => void }) {
@@ -222,20 +249,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                 <SidebarContent>
                     <SidebarGroup className="px-2 py-0">
                         <SidebarGroupLabel>Barkada Planner</SidebarGroupLabel>
-                        <SidebarMenu>
-                            {NAV_ITEMS.map(({ view: itemView, label, icon: Icon }) => (
-                                <SidebarMenuItem key={itemView}>
-                                    <SidebarMenuButton
-                                        isActive={view === itemView}
-                                        tooltip={{ children: label }}
-                                        onClick={() => setView(itemView)}
-                                    >
-                                        <Icon />
-                                        <span>{label}</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
+                        <NavMenu view={view} setView={setView} />
                     </SidebarGroup>
                 </SidebarContent>
 
