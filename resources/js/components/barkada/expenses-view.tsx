@@ -16,6 +16,7 @@ interface ExpensesViewProps {
     store: BarkadaStore;
     onAdd: (expense: Omit<Expense, 'id' | 'createdAt'>) => void;
     onRemove: (id: string) => void;
+    currentUserName?: string;
 }
 
 function formatPeso(amount: number): string {
@@ -352,7 +353,7 @@ const SPLIT_BADGE: Record<string, { label: string; className: string }> = {
     kkb: { label: 'KKB', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
 };
 
-export function ExpensesView({ store, onAdd, onRemove }: ExpensesViewProps) {
+export function ExpensesView({ store, onAdd, onRemove, currentUserName }: ExpensesViewProps) {
     const [isAdding, setIsAdding] = useState(false);
     const [filter, setFilter] = useState<Category | 'all'>('all');
     const { members, expenses, carpools } = store;
@@ -430,6 +431,7 @@ export function ExpensesView({ store, onAdd, onRemove }: ExpensesViewProps) {
                                         <TableHead className="pl-6">Description</TableHead>
                                         <TableHead>Category</TableHead>
                                         <TableHead>Paid by</TableHead>
+                                        <TableHead>Logged by</TableHead>
                                         <TableHead>Date</TableHead>
                                         <TableHead>Split</TableHead>
                                         <TableHead className="pr-6 text-right">Amount</TableHead>
@@ -458,6 +460,12 @@ export function ExpensesView({ store, onAdd, onRemove }: ExpensesViewProps) {
                                                     {expense.splitType === 'kkb' ? '—' : (payer?.name ?? 'Unknown')}
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground">
+                                                    {expense.loggedByName
+                                                        ? <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">{expense.loggedByName}</span>
+                                                        : <span className="text-xs">—</span>
+                                                    }
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground">
                                                     {formatDate(expense.createdAt)}
                                                 </TableCell>
                                                 <TableCell>
@@ -484,7 +492,7 @@ export function ExpensesView({ store, onAdd, onRemove }: ExpensesViewProps) {
                                 </TableBody>
                                 <TableFooter>
                                     <TableRow>
-                                        <TableCell className="pl-6" colSpan={5}>
+                                        <TableCell className="pl-6" colSpan={6}>
                                             Total
                                         </TableCell>
                                         <TableCell className="pr-6 text-right font-semibold tabular-nums">
@@ -507,7 +515,7 @@ export function ExpensesView({ store, onAdd, onRemove }: ExpensesViewProps) {
                 open={isAdding}
                 onOpenChange={setIsAdding}
                 onSave={(expense) => {
-                    onAdd(expense);
+                    onAdd({ ...expense, ...(currentUserName ? { loggedByName: currentUserName } : {}) });
                     setIsAdding(false);
                 }}
             />

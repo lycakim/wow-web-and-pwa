@@ -8,6 +8,8 @@ import { HomeView } from '@/components/barkada/home-view';
 import { MembersView } from '@/components/barkada/members-view';
 import { SettlementView } from '@/components/barkada/settlement-view';
 import { TripCodeBanner, TripLanding } from '@/components/barkada/trip-landing';
+import { UserSetup } from '@/components/barkada/user-setup';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import {
     Sidebar,
     SidebarContent,
@@ -25,7 +27,7 @@ import {
 import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
-import { Car, HandCoins, Home, LogOut, Moon, ReceiptText, Sun, Tag, Users, Wallet } from 'lucide-react';
+import { Car, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, Sun, Tag, Users, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -77,7 +79,9 @@ function useDarkMode() {
 function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: string | null; onLeave: () => void }) {
     const [view, setView] = useState<View>('home');
     const [showBanner, setShowBanner] = useState(!!tripCode);
+    const [editingName, setEditingName] = useState(false);
     const { dark, toggle: toggleDark } = useDarkMode();
+    const { name: currentUserName, saveName, isSet: nameIsSet } = useCurrentUser();
 
     const {
         store,
@@ -106,6 +110,10 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
     const displayCode = tripCode ?? localStorage.getItem(TRIP_CODE_KEY) ?? '';
 
     return (
+        <>
+        {(!nameIsSet || editingName) && (
+            <UserSetup onSave={(n) => { saveName(n); setEditingName(false); }} />
+        )}
         <SidebarProvider>
             <Sidebar collapsible="icon" variant="inset">
                 <SidebarHeader>
@@ -146,6 +154,15 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
 
                 <SidebarFooter>
                     <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton onClick={() => setEditingName(true)} tooltip={{ children: 'Change your name' }}>
+                                <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+                                    {currentUserName ? currentUserName[0].toUpperCase() : '?'}
+                                </div>
+                                <span className="truncate">{currentUserName || 'Set your name'}</span>
+                                <Pencil className="ml-auto size-3 text-muted-foreground" />
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
                         <SidebarMenuItem>
                             <SidebarMenuButton onClick={toggleDark} tooltip={{ children: dark ? 'Light mode' : 'Dark mode' }}>
                                 {dark ? <Sun /> : <Moon />}
@@ -211,7 +228,7 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
                                 />
                             )}
                             {view === 'expenses' && (
-                                <ExpensesView store={store} onAdd={addExpense} onRemove={removeExpense} />
+                                <ExpensesView store={store} onAdd={addExpense} onRemove={removeExpense} currentUserName={currentUserName || undefined} />
                             )}
                             {view === 'settlement' && <SettlementView store={store} />}
                             {view === 'categories' && (
@@ -237,6 +254,7 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
                 </main>
             </SidebarInset>
         </SidebarProvider>
+        </>
     );
 }
 

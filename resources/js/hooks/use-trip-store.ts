@@ -59,6 +59,7 @@ function mapExpense(row: Record<string, unknown>): Expense {
         ...(row.member_ids != null ? { memberIds: row.member_ids as string[] } : {}),
         ...(row.carpool_id ? { carpoolId: row.carpool_id as string } : {}),
         createdAt: row.created_at as string,
+        ...(row.logged_by_name ? { loggedByName: row.logged_by_name as string } : {}),
     };
 }
 
@@ -297,6 +298,7 @@ export function useTripStore(tripId: string) {
             member_ids: memberIds ?? null,
             carpool_id: expense.carpoolId ?? null,
             created_at: createdAt,
+            logged_by_name: expense.loggedByName ?? null,
         });
     };
 

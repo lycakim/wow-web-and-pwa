@@ -24,6 +24,7 @@ export interface Expense {
     memberIds?: string[]; // snapshot of member IDs at creation time (equal splits)
     carpoolId?: string;   // reference carpool used for display (carpool splits)
     createdAt: string;
+    loggedByName?: string; // display name of the person who logged this expense
 }
 
 export interface Trip {
