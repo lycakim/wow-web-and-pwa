@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { GroceryItem, GrocerySection, Member } from '@/types/barkada';
 import { GROCERY_SECTIONS } from '@/types/barkada';
-import { Check, Trash2, UserRound, X } from 'lucide-react';
+import { Trash2, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 
 interface GroceryViewProps {
@@ -172,28 +172,63 @@ interface GroceryRowProps {
 function GroceryRow({ item, members, currentUserName, onToggle, onAssign, onRemove }: GroceryRowProps) {
     const [showAssign, setShowAssign] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [animating, setAnimating] = useState(false);
     const assigned = item.assignedToNames ?? [];
     const hasAssigned = assigned.length > 0;
 
+    const handleToggle = () => {
+        if (!item.checked) {
+            setAnimating(true);
+            setTimeout(() => setAnimating(false), 500);
+        }
+        onToggle(item.id, currentUserName);
+    };
+
     return (
-        <div className={cn('rounded-lg px-3 py-2 transition-colors', item.checked ? 'opacity-60' : 'hover:bg-muted/50')}>
+        <div className={cn(
+            'rounded-lg px-3 py-2.5 transition-colors',
+            item.checked ? 'opacity-60' : 'hover:bg-muted/50',
+            animating && 'grocery-check-flash',
+        )}>
             <div className="flex items-center gap-3">
                 {/* Checkbox */}
                 <button
                     type="button"
-                    onClick={() => onToggle(item.id, currentUserName)}
+                    onClick={handleToggle}
                     className={cn(
-                        'flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                        'relative flex size-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors active:scale-95',
                         item.checked
-                            ? 'border-indigo-600 bg-indigo-600 text-white'
-                            : 'border-muted-foreground/40 hover:border-indigo-600',
+                            ? 'border-indigo-600 bg-indigo-600'
+                            : 'border-muted-foreground/40 hover:border-indigo-400 active:border-indigo-600',
+                        animating && 'grocery-check-bounce',
                     )}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
-                    {item.checked && <Check className="size-3 stroke-[3]" />}
+                    {item.checked && (
+                        <svg
+                            viewBox="0 0 12 10"
+                            fill="none"
+                            stroke="white"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="size-3.5"
+                            style={animating ? {
+                                strokeDasharray: 22,
+                                strokeDashoffset: 0,
+                                animation: 'check-draw 0.25s ease-out 0.05s both',
+                            } : undefined}
+                        >
+                            <path d="M1 5l3.5 3.5L11 1" />
+                        </svg>
+                    )}
                 </button>
 
                 {/* Name */}
-                <span className={cn('flex-1 text-sm', item.checked && 'line-through text-muted-foreground')}>
+                <span className={cn(
+                    'flex-1 text-sm transition-all duration-300',
+                    item.checked && 'line-through text-muted-foreground',
+                )}>
                     {item.name}
                 </span>
 

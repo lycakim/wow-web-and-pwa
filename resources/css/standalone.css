@@ -129,3 +129,37 @@
         }
     }
 }
+
+/* Grocery checklist animations */
+@keyframes check-bounce {
+    0%   { transform: scale(1); }
+    25%  { transform: scale(1.45); }
+    55%  { transform: scale(0.82); }
+    75%  { transform: scale(1.15); }
+    90%  { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
+
+@keyframes check-draw {
+    from { stroke-dashoffset: 22; }
+    to   { stroke-dashoffset: 0; }
+}
+
+@keyframes check-flash {
+    0%   { background-color: transparent; }
+    15%  { background-color: rgb(99 102 241 / 0.15); }
+    100% { background-color: transparent; }
+}
+
+@keyframes check-text-strike {
+    from { text-decoration-color: transparent; }
+    to   { text-decoration-color: currentColor; }
+}
+
+.grocery-check-bounce {
+    animation: check-bounce 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.grocery-check-flash {
+    animation: check-flash 0.5s ease-out forwards;
+}
