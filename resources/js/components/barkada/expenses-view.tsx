@@ -153,7 +153,7 @@ function ExpenseSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+            <SheetContent side="bottom" className="h-[92dvh] overflow-y-auto rounded-t-2xl sm:side-right sm:h-full sm:max-w-md sm:rounded-none">
                 <SheetHeader>
                     <SheetTitle>Add Expense</SheetTitle>
                 </SheetHeader>
@@ -232,7 +232,7 @@ function ExpenseSheet({
                                         type="button"
                                         onClick={() => setForm((p) => ({ ...p, splitType: type }))}
                                         className={cn(
-                                            'flex-1 py-2 text-xs font-medium transition-colors',
+                                            'flex-1 py-2.5 text-sm font-medium transition-colors',
                                             form.splitType === type
                                                 ? 'bg-indigo-600 text-white'
                                                 : 'bg-background text-foreground hover:bg-muted',
@@ -425,83 +425,109 @@ export function ExpensesView({ store, onAdd, onRemove, currentUserName }: Expens
                                 <p className="text-xs text-muted-foreground">Tap Add Expense to get started</p>
                             </div>
                         ) : (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="pl-6">Description</TableHead>
-                                        <TableHead>Category</TableHead>
-                                        <TableHead>Paid by</TableHead>
-                                        <TableHead>Logged by</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Split</TableHead>
-                                        <TableHead className="pr-6 text-right">Amount</TableHead>
-                                        <TableHead className="pr-6" />
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
+                            <>
+                                {/* Mobile card list */}
+                                <div className="divide-y sm:hidden">
                                     {filtered.map((expense) => {
                                         const meta = getCategoryMeta(expense.category, store);
                                         const payer = memberById[expense.paidById];
                                         const splitBadge = SPLIT_BADGE[expense.splitType] ?? SPLIT_BADGE.custom;
                                         const carpoolName = expense.carpoolId ? carpoolById[expense.carpoolId]?.name : null;
-
                                         return (
-                                            <TableRow key={expense.id}>
-                                                <TableCell className="pl-6 font-medium">{expense.description}</TableCell>
-                                                <TableCell>
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={cn('border-0 text-xs', meta.bgClass, meta.textClass)}
-                                                    >
-                                                        {meta.icon} {meta.shortLabel}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground">
-                                                    {expense.splitType === 'kkb' ? '—' : (payer?.name ?? 'Unknown')}
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground">
-                                                    {expense.loggedByName
-                                                        ? <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">{expense.loggedByName}</span>
-                                                        : <span className="text-xs">—</span>
-                                                    }
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground">
-                                                    {formatDate(expense.createdAt)}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant="outline" className={cn('border-0 text-xs', splitBadge.className)}>
-                                                        {carpoolName ?? splitBadge.label}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="pr-6 text-right font-semibold tabular-nums">
-                                                    {formatPeso(expense.amount)}
-                                                </TableCell>
-                                                <TableCell className="pr-4 text-right">
-                                                    <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="size-8 text-muted-foreground hover:text-destructive"
-                                                        onClick={() => onRemove(expense.id)}
-                                                    >
+                                            <div key={expense.id} className="flex items-start gap-3 px-4 py-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-medium text-sm truncate">{expense.description}</span>
+                                                        <Badge variant="outline" className={cn('border-0 text-xs shrink-0', meta.bgClass, meta.textClass)}>
+                                                            {meta.icon} {meta.shortLabel}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                                                        {expense.splitType !== 'kkb' && <span>Paid by <span className="font-medium text-foreground">{payer?.name ?? 'Unknown'}</span></span>}
+                                                        {expense.loggedByName && <span>· by <span className="font-medium text-indigo-600 dark:text-indigo-400">{expense.loggedByName}</span></span>}
+                                                        <span>· {formatDate(expense.createdAt)}</span>
+                                                        <Badge variant="outline" className={cn('border-0 text-[10px] px-1.5 py-0', splitBadge.className)}>
+                                                            {carpoolName ?? splitBadge.label}
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <span className="font-semibold tabular-nums text-sm">{formatPeso(expense.amount)}</span>
+                                                    <Button size="icon" variant="ghost" className="size-9 text-muted-foreground hover:text-destructive" onClick={() => onRemove(expense.id)}>
                                                         <Trash2 className="size-4" />
                                                     </Button>
-                                                </TableCell>
-                                            </TableRow>
+                                                </div>
+                                            </div>
                                         );
                                     })}
-                                </TableBody>
-                                <TableFooter>
-                                    <TableRow>
-                                        <TableCell className="pl-6" colSpan={6}>
-                                            Total
-                                        </TableCell>
-                                        <TableCell className="pr-6 text-right font-semibold tabular-nums">
-                                            {formatPeso(totalFiltered)}
-                                        </TableCell>
-                                        <TableCell className="pr-4" />
-                                    </TableRow>
-                                </TableFooter>
-                            </Table>
+                                    <div className="flex justify-between px-4 py-3 text-sm font-semibold">
+                                        <span>Total</span>
+                                        <span className="tabular-nums">{formatPeso(totalFiltered)}</span>
+                                    </div>
+                                </div>
+
+                                {/* Desktop table */}
+                                <Table className="hidden sm:table">
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="pl-6">Description</TableHead>
+                                            <TableHead>Category</TableHead>
+                                            <TableHead>Paid by</TableHead>
+                                            <TableHead>Logged by</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Split</TableHead>
+                                            <TableHead className="pr-6 text-right">Amount</TableHead>
+                                            <TableHead className="pr-6" />
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filtered.map((expense) => {
+                                            const meta = getCategoryMeta(expense.category, store);
+                                            const payer = memberById[expense.paidById];
+                                            const splitBadge = SPLIT_BADGE[expense.splitType] ?? SPLIT_BADGE.custom;
+                                            const carpoolName = expense.carpoolId ? carpoolById[expense.carpoolId]?.name : null;
+                                            return (
+                                                <TableRow key={expense.id}>
+                                                    <TableCell className="pl-6 font-medium">{expense.description}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline" className={cn('border-0 text-xs', meta.bgClass, meta.textClass)}>
+                                                            {meta.icon} {meta.shortLabel}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-muted-foreground">
+                                                        {expense.splitType === 'kkb' ? '—' : (payer?.name ?? 'Unknown')}
+                                                    </TableCell>
+                                                    <TableCell className="text-muted-foreground">
+                                                        {expense.loggedByName
+                                                            ? <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">{expense.loggedByName}</span>
+                                                            : <span className="text-xs">—</span>
+                                                        }
+                                                    </TableCell>
+                                                    <TableCell className="text-muted-foreground">{formatDate(expense.createdAt)}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline" className={cn('border-0 text-xs', splitBadge.className)}>
+                                                            {carpoolName ?? splitBadge.label}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="pr-6 text-right font-semibold tabular-nums">{formatPeso(expense.amount)}</TableCell>
+                                                    <TableCell className="pr-4 text-right">
+                                                        <Button size="icon" variant="ghost" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => onRemove(expense.id)}>
+                                                            <Trash2 className="size-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                    <TableFooter>
+                                        <TableRow>
+                                            <TableCell className="pl-6" colSpan={6}>Total</TableCell>
+                                            <TableCell className="pr-6 text-right font-semibold tabular-nums">{formatPeso(totalFiltered)}</TableCell>
+                                            <TableCell className="pr-4" />
+                                        </TableRow>
+                                    </TableFooter>
+                                </Table>
+                            </>
                         )}
                     </CardContent>
                 </Card>

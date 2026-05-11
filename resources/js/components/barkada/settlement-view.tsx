@@ -147,49 +147,69 @@ export function SettlementView({ store }: SettlementViewProps) {
                             <p className="text-sm text-muted-foreground">No payments needed</p>
                         </div>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="pl-6">From</TableHead>
-                                    <TableHead />
-                                    <TableHead>To</TableHead>
-                                    <TableHead className="pr-6 text-right">Amount</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
+                        <>
+                            {/* Mobile cards */}
+                            <div className="divide-y sm:hidden">
                                 {settlements.map((s, i) => {
                                     const from = memberById[s.fromId] ?? { id: s.fromId, name: '(Deleted)' };
                                     const to = memberById[s.toId] ?? { id: s.toId, name: '(Deleted)' };
-
                                     return (
-                                        <TableRow key={i}>
-                                            <TableCell className="pl-6">
-                                                <div className="flex items-center gap-2.5">
+                                        <div key={i} className="px-4 py-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="flex items-center gap-2 min-w-0">
                                                     <MemberAvatar name={from.name} members={members} id={from.id} />
-                                                    <span className={from.name === '(Deleted)' ? 'font-medium italic text-muted-foreground' : 'font-medium'}>
-                                                        {from.name}
-                                                    </span>
+                                                    <span className="truncate text-sm font-medium">{from.name}</span>
                                                 </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <ArrowRight className="size-4 text-muted-foreground" />
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2.5">
+                                                <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                                                <div className="flex items-center gap-2 min-w-0">
                                                     <MemberAvatar name={to.name} members={members} id={to.id} />
-                                                    <span className={to.name === '(Deleted)' ? 'font-medium italic text-muted-foreground' : 'font-medium'}>
-                                                        {to.name}
-                                                    </span>
+                                                    <span className="truncate text-sm font-medium">{to.name}</span>
                                                 </div>
-                                            </TableCell>
-                                            <TableCell className="pr-6 text-right font-bold tabular-nums text-indigo-600 dark:text-indigo-400">
-                                                {formatPeso(s.amount)}
-                                            </TableCell>
-                                        </TableRow>
+                                                <span className="shrink-0 font-bold tabular-nums text-indigo-600 dark:text-indigo-400">
+                                                    {formatPeso(s.amount)}
+                                                </span>
+                                            </div>
+                                        </div>
                                     );
                                 })}
-                            </TableBody>
-                        </Table>
+                            </div>
+
+                            {/* Desktop table */}
+                            <Table className="hidden sm:table">
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="pl-6">From</TableHead>
+                                        <TableHead />
+                                        <TableHead>To</TableHead>
+                                        <TableHead className="pr-6 text-right">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {settlements.map((s, i) => {
+                                        const from = memberById[s.fromId] ?? { id: s.fromId, name: '(Deleted)' };
+                                        const to = memberById[s.toId] ?? { id: s.toId, name: '(Deleted)' };
+                                        return (
+                                            <TableRow key={i}>
+                                                <TableCell className="pl-6">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <MemberAvatar name={from.name} members={members} id={from.id} />
+                                                        <span className={from.name === '(Deleted)' ? 'font-medium italic text-muted-foreground' : 'font-medium'}>{from.name}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell><ArrowRight className="size-4 text-muted-foreground" /></TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2.5">
+                                                        <MemberAvatar name={to.name} members={members} id={to.id} />
+                                                        <span className={to.name === '(Deleted)' ? 'font-medium italic text-muted-foreground' : 'font-medium'}>{to.name}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="pr-6 text-right font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{formatPeso(s.amount)}</TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </>
                     )}
                 </CardContent>
             </Card>

@@ -287,16 +287,20 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
 
             <SidebarInset>
                 {/* Header */}
-                <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-                    <SidebarTrigger className="-ml-1" />
+                <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+                    <SidebarTrigger className="-ml-1 size-9" />
                     <div className="h-4 w-px bg-border" />
                     <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <span>Barkada Planner</span>
-                        {view !== 'home' && (
+                        <span className="hidden sm:inline">Barkada Planner</span>
+                        {view !== 'home' ? (
                             <>
-                                <span>/</span>
-                                <span className="text-foreground">{VIEW_LABELS[view]}</span>
+                                <span className="hidden sm:inline">/</span>
+                                <span className="text-foreground font-medium">{VIEW_LABELS[view]}</span>
                             </>
+                        ) : (
+                            <span className="text-foreground font-medium sm:hidden">
+                                {store.trip.name || 'Barkada Planner'}
+                            </span>
                         )}
                     </nav>
                 </header>

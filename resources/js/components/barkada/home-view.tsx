@@ -45,7 +45,7 @@ function TripEditForm({ trip, onSave, onCancel }: { trip: Trip; onSave: (t: Trip
                 <CardTitle className="text-base">Edit Trip Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                     {(
                         [
                             { key: 'name' as const, label: 'Trip Name', type: 'text', placeholder: 'Batangas Beach Trip' },
