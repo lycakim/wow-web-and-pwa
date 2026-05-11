@@ -28,7 +28,7 @@ import {
 import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
-import { Car, Check, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
+import { ArrowLeftRight, Car, Check, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -79,7 +79,7 @@ function useDarkMode() {
     return { dark, toggle };
 }
 
-function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: string | null; onLeave: (id: string) => void }) {
+function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; tripCode: string | null; onSwitch: () => void; onLeave: (id: string) => void }) {
     const [view, setView] = useState<View>('home');
     const [showBanner, setShowBanner] = useState(!!tripCode);
     const [editingName, setEditingName] = useState(false);
@@ -270,7 +270,13 @@ function TripApp({ tripId, tripCode, onLeave }: { tripId: string; tripCode: stri
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => onLeave(tripId)} tooltip={{ children: 'Leave trip' }} className="text-muted-foreground hover:text-destructive">
+                            <SidebarMenuButton onClick={onSwitch} tooltip={{ children: 'Visit another trip' }} className="text-muted-foreground">
+                                <ArrowLeftRight />
+                                <span>Switch Trip</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton onClick={() => onLeave(tripId)} tooltip={{ children: 'Leave & remove yourself from this trip' }} className="text-muted-foreground hover:text-destructive">
                                 <LogOut />
                                 <span>Leave Trip</span>
                             </SidebarMenuButton>
@@ -381,6 +387,15 @@ function BarkadaSharedApp() {
         setTripId(id);
     };
 
+    // Switch: go to landing but keep membership (can rejoin same trip)
+    const handleSwitch = () => {
+        localStorage.removeItem(TRIP_ID_KEY);
+        localStorage.removeItem(TRIP_CODE_KEY);
+        setTripId(null);
+        setNewTripCode(null);
+    };
+
+    // Leave: remove membership then go to landing
     const handleLeave = (id?: string) => {
         const resolvedId = id ?? localStorage.getItem(TRIP_ID_KEY);
         if (resolvedId) localStorage.removeItem(`barkada-joined-${resolvedId}`);
@@ -394,7 +409,7 @@ function BarkadaSharedApp() {
         return <TripLanding onEnter={handleEnter} />;
     }
 
-    return <TripApp tripId={tripId} tripCode={newTripCode} onLeave={handleLeave} />;
+    return <TripApp tripId={tripId} tripCode={newTripCode} onSwitch={handleSwitch} onLeave={handleLeave} />;
 }
 
 createRoot(document.getElementById('app')!).render(<BarkadaSharedApp />);
