@@ -120,6 +120,9 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
     const {
         store,
         isHydrated,
+        isOnline,
+        pendingCount,
+        isSyncing,
         regenerateTripCode,
         updateTrip,
         addMember,
@@ -325,6 +328,29 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                 {/* Trip code banner shown after creating */}
                 {showBanner && displayCode && (
                     <TripCodeBanner code={displayCode} onDismiss={() => setShowBanner(false)} />
+                )}
+
+                {/* Offline / syncing banner */}
+                {(!isOnline || isSyncing) && (
+                    <div className={cn(
+                        'flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium transition-colors',
+                        isSyncing
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-amber-400 text-amber-950 dark:bg-amber-500 dark:text-amber-950',
+                    )}>
+                        {isSyncing ? (
+                            <>
+                                <span className="size-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                Syncing {pendingCount} change{pendingCount !== 1 ? 's' : ''}…
+                            </>
+                        ) : (
+                            <>
+                                <span>⚡</span>
+                                Offline — changes will sync when you reconnect
+                                {pendingCount > 0 && <span className="ml-1 rounded-full bg-amber-950/20 px-1.5 py-0.5">{pendingCount} pending</span>}
+                            </>
+                        )}
+                    </div>
                 )}
 
                 {/* Content */}
