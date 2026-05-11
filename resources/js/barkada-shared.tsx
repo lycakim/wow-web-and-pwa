@@ -82,11 +82,11 @@ function useDarkMode() {
 }
 
 function NavMenu({ view, setView }: { view: View; setView: (v: View) => void }) {
-    const { setOpenMobile, isMobile } = useSidebar();
+    const { setOpenMobile } = useSidebar();
 
     const handleNav = (v: View) => {
         setView(v);
-        if (isMobile) setOpenMobile(false);
+        setOpenMobile(false);
     };
 
     return (

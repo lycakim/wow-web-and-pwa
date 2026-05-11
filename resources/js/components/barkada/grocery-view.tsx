@@ -44,33 +44,37 @@ export function GroceryView({ items, members, currentUserName, onAdd, onToggle, 
     return (
         <div className="space-y-4 p-4">
             {/* Section tabs */}
-            <div className="flex rounded-xl border bg-muted/40 p-1 gap-1">
-                {GROCERY_SECTIONS.map((s) => (
-                    <button
-                        key={s.key}
-                        type="button"
-                        onClick={() => setActiveSection(s.key)}
-                        className={cn(
-                            'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-sm font-medium transition-colors',
-                            activeSection === s.key
-                                ? 'bg-background shadow-sm text-foreground'
-                                : 'text-muted-foreground hover:text-foreground',
-                        )}
-                    >
-                        <span>{s.icon}</span>
-                        <span>{s.label}</span>
-                        {countBySection[s.key] > 0 && (
-                            <span className={cn(
-                                'ml-0.5 rounded-full px-1.5 py-0 text-[10px] font-semibold tabular-nums',
-                                activeSection === s.key
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'bg-muted-foreground/20 text-muted-foreground',
-                            )}>
-                                {countBySection[s.key]}
-                            </span>
-                        )}
-                    </button>
-                ))}
+            <div className="flex gap-2">
+                {GROCERY_SECTIONS.map((s) => {
+                    const isActive = activeSection === s.key;
+                    const count = countBySection[s.key];
+                    return (
+                        <button
+                            key={s.key}
+                            type="button"
+                            onClick={() => setActiveSection(s.key)}
+                            className={cn(
+                                'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl border py-3 px-2 transition-all',
+                                isActive
+                                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-md'
+                                    : 'border-border bg-card text-muted-foreground hover:border-indigo-300 hover:text-foreground',
+                            )}
+                        >
+                            <span className="text-2xl leading-none">{s.icon}</span>
+                            <span className="text-xs font-semibold">{s.label}</span>
+                            {count > 0 && (
+                                <span className={cn(
+                                    'absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full text-[10px] font-bold tabular-nums',
+                                    isActive
+                                        ? 'bg-white text-indigo-600'
+                                        : 'bg-indigo-600 text-white',
+                                )}>
+                                    {count}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
             </div>
 
             <Card>
