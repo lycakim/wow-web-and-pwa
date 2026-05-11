@@ -1,6 +1,6 @@
 {
-    "buildCommand": "npm run build:standalone",
-    "outputDirectory": "standalone-dist",
+    "buildCommand": "npm run build:shared",
+    "outputDirectory": "shared-dist",
     "framework": null,
     "rewrites": [
         { "source": "/(.*)", "destination": "/index.html" }
