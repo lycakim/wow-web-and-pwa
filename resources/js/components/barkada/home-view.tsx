@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,7 +5,7 @@ import { calculateSettlements, getSpendByCategory, getTotalBudget, getTotalSpend
 import { cn } from '@/lib/utils';
 import type { BarkadaStore, Member, Trip, View } from '@/types/barkada';
 import { calculateMemberBudgetShare, getActiveBudgetItems, getActiveExpenses, getAllCategories } from '@/types/barkada';
-import { ArrowRight, CalendarDays, MapPin, Pencil, Plus, Wallet } from 'lucide-react';
+import { CalendarDays, HandCoins, MapPin, Pencil, Plus, ReceiptText, Users, Vault } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const MY_MEMBER_KEY = 'barkada-my-member-id';
@@ -66,34 +65,6 @@ function getDaysInfo(startDate: string, endDate: string): {
     return { countdown, dayProgress };
 }
 
-// Circular SVG progress ring
-function ProgressRing({
-    value, max, size = 72, strokeWidth = 7, colorClass = 'text-indigo-500',
-}: {
-    value: number; max: number; size?: number; strokeWidth?: number; colorClass?: string;
-}) {
-    const radius = (size - strokeWidth) / 2;
-    const circumference = 2 * Math.PI * radius;
-    const pct = max > 0 ? Math.min(1, value / max) : 0;
-    const offset = circumference * (1 - pct);
-    const pctLabel = max > 0 ? Math.round(pct * 100) : 0;
-
-    return (
-        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-            <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={strokeWidth} className="stroke-muted" />
-                <circle
-                    cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={strokeWidth}
-                    strokeDasharray={circumference} strokeDashoffset={offset}
-                    strokeLinecap="round" className={cn('transition-all duration-700', colorClass)}
-                    style={{ stroke: 'currentColor' }}
-                />
-            </svg>
-            <span className="absolute text-xs font-bold tabular-nums">{pctLabel}%</span>
-        </div>
-    );
-}
-
 interface HomeViewProps {
     store: BarkadaStore;
     onUpdateTrip: (trip: Trip) => void;
@@ -122,8 +93,8 @@ function TripEditForm({ trip, onSave, onCancel }: { trip: Trip; onSave: (t: Trip
                     ))}
                 </div>
                 <div className="flex gap-2 pt-1">
-                    <Button onClick={() => onSave(form)} className="flex-1 bg-indigo-600 hover:bg-indigo-700">Save</Button>
-                    <Button variant="outline" onClick={onCancel} className="flex-1">Cancel</Button>
+                    <button onClick={() => onSave(form)} className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors">Save</button>
+                    <button onClick={onCancel} className="flex-1 rounded-lg border py-2 text-sm font-semibold transition-colors hover:bg-muted">Cancel</button>
                 </div>
             </CardContent>
         </Card>
@@ -141,13 +112,12 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
     const totalSpend = getTotalSpend(activeExpenses);
     const remaining = totalBudget - totalSpend;
     const isOverBudget = remaining < 0;
-    const hasTrip = trip.name || trip.destination;
     const settlements = calculateSettlements(members, activeExpenses, collections, collectionPayments);
     const allCategories = getAllCategories(store);
     const spendByCategory = getSpendByCategory(activeExpenses);
     const { countdown, dayProgress } = getDaysInfo(trip.startDate, trip.endDate);
+    const budgetPct = totalBudget > 0 ? Math.min(100, (totalSpend / totalBudget) * 100) : 0;
 
-    // Collections
     const activeCollections = collections.filter((c) => {
         const paid = collectionPayments.filter((p) => p.collectionId === c.id).reduce((s, p) => s + p.amount, 0);
         return paid < c.targetAmount;
@@ -155,7 +125,6 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
     const totalCollected = collectionPayments.reduce((s, p) => s + p.amount, 0);
     const totalCollectionTarget = collections.reduce((s, c) => s + c.targetAmount, 0);
 
-    // Load "I am" selection
     useEffect(() => {
         const saved = localStorage.getItem(MY_MEMBER_KEY);
         if (saved && members.some((m) => m.id === saved)) {
@@ -177,26 +146,25 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
     const allPaidUp = myBudgetShare > 0 && myStillNeeded === 0;
 
     const memberById = Object.fromEntries(members.map((m) => [m.id, m]));
-    const recentExpenses = activeExpenses.slice(0, 4);
-    const budgetPct = totalBudget > 0 ? Math.min(100, (totalSpend / totalBudget) * 100) : 0;
+    const recentExpenses = activeExpenses.slice(0, 5);
     const perPersonRemaining = members.length > 0 && remaining > 0 ? remaining / members.length : null;
 
-    // Top 3 categories by spend
-    const topCategories = Object.entries(spendByCategory)
+    // Bar chart data
+    const chartCategories = Object.entries(spendByCategory)
         .sort(([, a], [, b]) => b - a)
-        .slice(0, 3)
+        .slice(0, 5)
         .map(([key, amount]) => ({ key, amount, meta: allCategories[key] }))
         .filter(({ meta }) => !!meta);
+    const maxCategorySpend = Math.max(...chartCategories.map((c) => c.amount), 1);
 
-    // Biggest spender
-    const spendByMember: Record<string, number> = {};
-    for (const e of activeExpenses) {
-        spendByMember[e.paidById] = (spendByMember[e.paidById] ?? 0) + e.amount;
-    }
-    const biggestSpender = Object.entries(spendByMember).sort(([, a], [, b]) => b - a)[0];
-    const biggestSpenderMember = biggestSpender ? memberById[biggestSpender[0]] : null;
+    // Member balance summaries
+    const memberBalanceSummaries = members.map((m) => {
+        const share = calculateMemberBudgetShare(m.id, activeBudgetItems, carpools, members.length) + bufferContingencyShare;
+        const advance = collectionPayments.filter((p) => p.fromMemberId === m.id).reduce((s, p) => s + p.amount, 0);
+        return { member: m, share, advance, remaining: share - advance };
+    });
 
-    // Members who haven't paid any amount toward each collection
+    // Collections helper
     const collectionMemberStatus = (collectionId: string, memberIds: string[], targetAmount: number) => {
         const sharePerPerson = memberIds.length > 0 ? targetAmount / memberIds.length : 0;
         return memberIds.filter((mid) => {
@@ -206,311 +174,317 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
     };
 
     return (
-        <div className="space-y-3 p-3">
-            {/* Trip hero */}
+        <div className="space-y-4 p-4">
             {isEditing ? (
                 <TripEditForm trip={trip} onSave={(t) => { onUpdateTrip(t); setIsEditing(false); }} onCancel={() => setIsEditing(false)} />
             ) : (
-                <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-lg">
-                    <div className="relative p-4">
-                        <button
-                            onClick={() => setIsEditing(true)}
-                            className="absolute right-3 top-3 rounded-full bg-white/20 p-1.5 transition hover:bg-white/30"
-                            aria-label="Edit trip details"
-                        >
-                            <Pencil className="size-3.5" />
-                        </button>
-
-                        {hasTrip ? (
-                            <>
-                                <p className="text-xs font-medium uppercase tracking-widest text-white/60">Barkada Trip</p>
-                                <h2 className="mt-0.5 text-2xl font-bold leading-tight">{trip.name || 'Unnamed Trip'}</h2>
-
-                                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                                    {trip.destination && (
-                                        <div className="flex items-center gap-1 text-sm text-white/80">
-                                            <MapPin className="size-3.5" />
-                                            <span>{trip.destination}</span>
-                                        </div>
-                                    )}
-                                    {(trip.startDate || trip.endDate) && (
-                                        <div className="flex items-center gap-1 text-sm text-white/80">
-                                            <CalendarDays className="size-3.5" />
-                                            <span>
-                                                {trip.startDate && new Date(trip.startDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                {trip.startDate && trip.endDate && ' – '}
-                                                {trip.endDate && new Date(trip.endDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Day progress bar */}
-                                {dayProgress && (
-                                    <div className="mt-3">
-                                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
-                                            <div
-                                                className="h-full rounded-full bg-white/70 transition-all"
-                                                style={{ width: `${(dayProgress.current / dayProgress.total) * 100}%` }}
-                                            />
-                                        </div>
-                                        <p className="mt-1 text-[11px] text-white/60">Day {dayProgress.current} of {dayProgress.total}</p>
-                                    </div>
+                <>
+                    {/* ── Header ── */}
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Barkada Trip</p>
+                            <h1 className="truncate text-xl font-bold sm:text-2xl">{trip.name || 'My Trip'}</h1>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                                {trip.destination && (
+                                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <MapPin className="size-3" />{trip.destination}
+                                    </span>
                                 )}
-
-                                {/* Countdown pill */}
-                                {countdown && (
-                                    <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
-                                        <span>{countdown.emoji}</span>
-                                        <span>{countdown.label}</span>
-                                    </div>
+                                {(trip.startDate || trip.endDate) && (
+                                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <CalendarDays className="size-3" />
+                                        {trip.startDate && new Date(trip.startDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        {trip.startDate && trip.endDate && ' – '}
+                                        {trip.endDate && new Date(trip.endDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </span>
                                 )}
-
-                                {/* Member avatars */}
-                                {members.length > 0 && (
-                                    <div className="mt-3 flex items-center gap-1.5">
-                                        <div className="flex -space-x-2">
-                                            {members.slice(0, 6).map((m) => (
-                                                <span
-                                                    key={m.id}
-                                                    title={m.name}
-                                                    className={cn(
-                                                        'inline-flex size-7 items-center justify-center rounded-full border-2 border-indigo-600 text-[10px] font-bold text-white',
-                                                        avatarColor(members, m.id),
-                                                    )}
-                                                >
-                                                    {getInitials(m.name)}
-                                                </span>
-                                            ))}
-                                            {members.length > 6 && (
-                                                <span className="inline-flex size-7 items-center justify-center rounded-full border-2 border-indigo-600 bg-white/20 text-[10px] font-bold">
-                                                    +{members.length - 6}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <span className="text-xs text-white/60">{members.length} member{members.length !== 1 ? 's' : ''}</span>
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="py-2 text-center">
-                                <p className="text-lg font-bold">Welcome to Barkada Planner!</p>
-                                <p className="mt-1 text-sm text-white/70">Tap the pencil to set up your trip</p>
                             </div>
-                        )}
+                            {countdown && (
+                                <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                                    {countdown.emoji} {countdown.label}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="rounded-lg border p-1.5 text-muted-foreground transition hover:bg-muted"
+                                aria-label="Edit trip"
+                            >
+                                <Pencil className="size-3.5" />
+                            </button>
+                            <button
+                                onClick={() => onNavigate('expenses')}
+                                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700"
+                            >
+                                <Plus className="size-3.5" /> Add Expense
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Stat ribbon */}
-                    <div className="grid grid-cols-4 border-t border-white/20">
-                        {[
-                            { label: 'Members', value: members.length, view: 'members' as View },
-                            { label: 'Expenses', value: activeExpenses.length, view: 'expenses' as View },
-                            { label: 'Collections', value: activeCollections.length, view: 'collections' as View },
-                            { label: 'Settlements', value: settlements.length, view: 'settlement' as View },
-                        ].map(({ label, value, view }, i) => (
-                            <button
-                                key={view}
-                                type="button"
-                                onClick={() => onNavigate(view)}
-                                className={cn(
-                                    'flex flex-col items-center gap-0.5 py-3 transition hover:bg-white/10',
-                                    i !== 0 && 'border-l border-white/20',
-                                )}
-                            >
-                                <span className="text-xl font-bold tabular-nums">{value}</span>
-                                <span className="text-[10px] text-white/60">{label}</span>
-                            </button>
+                    {/* Day progress bar (during trip) */}
+                    {dayProgress && (
+                        <div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                <div
+                                    className="h-full rounded-full bg-indigo-500 transition-all"
+                                    style={{ width: `${(dayProgress.current / dayProgress.total) * 100}%` }}
+                                />
+                            </div>
+                            <p className="mt-1 text-[11px] text-muted-foreground">Day {dayProgress.current} of {dayProgress.total}</p>
+                        </div>
+                    )}
+
+                    {/* ── Stat cards ── */}
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        {([
+                            { icon: Users, label: 'Members', value: members.length, sub: 'Active participants', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/30' },
+                            { icon: ReceiptText, label: 'Expenses Logged', value: activeExpenses.length, sub: 'Total transactions', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/30' },
+                            { icon: Vault, label: 'Collections', value: activeCollections.length, sub: 'Funds gathered', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-950/30' },
+                            { icon: HandCoins, label: 'Settlements', value: settlements.length, sub: 'Payments needed', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/30' },
+                        ] as const).map(({ icon: Icon, label, value, sub, color, bg }) => (
+                            <div key={label} className={cn('rounded-2xl p-4', bg)}>
+                                <Icon className={cn('mb-2 size-4', color)} />
+                                <p className={cn('text-2xl font-bold tabular-nums', color)}>{value}</p>
+                                <p className="mt-0.5 text-[11px] font-semibold text-foreground/70">{label}</p>
+                                <p className="text-[10px] text-muted-foreground">{sub}</p>
+                            </div>
                         ))}
                     </div>
-                </div>
-            )}
 
-            {/* Quick actions */}
-            <div className="grid grid-cols-2 gap-2">
-                <button
-                    type="button"
-                    onClick={() => onNavigate('expenses')}
-                    className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
-                >
-                    <Plus className="size-4" /> Log Expense
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onNavigate('collections')}
-                    className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-violet-300 bg-violet-50 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-300 dark:hover:bg-violet-950/50"
-                >
-                    <Plus className="size-4" /> Record Payment
-                </button>
-            </div>
-
-            {/* 2-column grid */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-
-                {/* My balance */}
-                {me && myBudgetShare > 0 && (
-                    <button type="button" onClick={() => onNavigate('mybalance')} className="h-full w-full text-left">
-                        <div className={cn(
-                            'flex h-full flex-col overflow-hidden rounded-2xl p-4 text-white shadow-sm transition-opacity hover:opacity-95',
-                            allPaidUp ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-violet-600 to-purple-700',
-                        )}>
-                            <div className="flex items-center gap-2">
-                                <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold">
-                                    {getInitials(me.name)}
-                                </span>
-                                <p className="text-xs text-white/80">
-                                    Hi, {me.name.split(' ')[0]}! {allPaidUp ? "You're all paid up" : 'You still need to bring'}
-                                </p>
-                                <ArrowRight className="ml-auto size-3.5 shrink-0 text-white/60" />
-                            </div>
-                            {allPaidUp ? (
-                                <p className="mt-2 text-2xl font-bold">🎉 All settled!</p>
-                            ) : (
-                                <p className="mt-1.5 text-3xl font-bold tabular-nums">{formatPeso(myStillNeeded)}</p>
-                            )}
-                            <div className="mt-auto flex items-center gap-3 border-t border-white/20 pt-2.5 text-[11px] text-white/70">
-                                <span>Share {formatPeso(myBudgetShare)}</span>
-                                {myAdvancePaid > 0 && <span>· Paid {formatPeso(myAdvancePaid)}</span>}
-                            </div>
-                        </div>
-                    </button>
-                )}
-
-                {/* Budget */}
-                {(totalBudget > 0 || totalSpend > 0) && (
-                    <button type="button" onClick={() => onNavigate('budget')} className="h-full w-full text-left">
-                        <Card className="h-full transition-colors hover:bg-muted/40">
-                            <CardContent className="flex h-full flex-col p-4">
-                                <div className="mb-2 flex items-center gap-1.5">
-                                    <Wallet className="size-3.5 text-muted-foreground" />
-                                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Budget</span>
-                                    <ArrowRight className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <ProgressRing
-                                        value={totalSpend}
-                                        max={totalBudget > 0 ? totalBudget : totalSpend}
-                                        size={64}
-                                        strokeWidth={6}
-                                        colorClass={isOverBudget ? 'text-destructive' : 'text-indigo-500'}
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        {totalBudget > 0 ? (
-                                            <>
-                                                <p className="text-[11px] text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</p>
-                                                <p className={cn('text-xl font-bold tabular-nums leading-tight', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
-                                                    {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
-                                                </p>
-                                                <p className="text-[11px] text-muted-foreground">of {formatPeso(totalBudget)}</p>
-                                                {perPersonRemaining !== null && members.length > 1 && (
-                                                    <p className="mt-0.5 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
-                                                        ≈ {formatPeso(perPersonRemaining)} each
-                                                    </p>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <p className="text-[11px] text-muted-foreground">Spent</p>
-                                                <p className="text-xl font-bold tabular-nums">{formatPeso(totalSpend)}</p>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                                {topCategories.length > 0 && (
-                                    <div className="mt-auto flex flex-wrap gap-1 pt-2.5">
-                                        {topCategories.map(({ key, amount, meta }) => (
-                                            <span key={key} className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium', meta.bgClass, meta.textClass)}>
-                                                {meta.icon} {meta.shortLabel} · {formatPeso(amount)}
+                    {/* ── Balance + Budget ── */}
+                    {(me && myBudgetShare > 0 || totalBudget > 0) && (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {/* Your Balance Due */}
+                            {me && myBudgetShare > 0 && (
+                                <button type="button" onClick={() => onNavigate('mybalance')} className="w-full text-left">
+                                    <div className={cn(
+                                        'flex h-full flex-col rounded-2xl p-5 text-white',
+                                        allPaidUp
+                                            ? 'bg-gradient-to-br from-emerald-500 to-green-600'
+                                            : 'bg-gradient-to-br from-indigo-600 to-violet-700',
+                                    )}>
+                                        <p className="text-[11px] font-medium text-white/70">Your Balance Due</p>
+                                        <p className="mt-1 text-3xl font-bold tabular-nums">
+                                            {allPaidUp ? '🎉 All settled!' : formatPeso(myStillNeeded)}
+                                        </p>
+                                        <p className="mt-1 text-xs text-white/60">
+                                            {allPaidUp
+                                                ? `Hi ${me.name.split(' ')[0]}, you're all paid up`
+                                                : `Hi ${me.name.split(' ')[0]}, you still need to bring this amount`}
+                                        </p>
+                                        <div className="mt-4 flex items-center justify-between border-t border-white/20 pt-3">
+                                            <div className="text-xs text-white/60">
+                                                <span>Share {formatPeso(myBudgetShare)}</span>
+                                                {myAdvancePaid > 0 && <span> · Paid {formatPeso(myAdvancePaid)}</span>}
+                                            </div>
+                                            <span className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/30">
+                                                <HandCoins className="size-3.5" /> Record Payment
                                             </span>
-                                        ))}
+                                        </div>
                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </button>
-                )}
-
-                {/* Collections */}
-                {collections.length > 0 && (
-                    <Card className="h-full">
-                        <CardContent className="p-4">
-                            <div className="mb-2 flex items-center justify-between">
-                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Collections</span>
-                                <button type="button" onClick={() => onNavigate('collections')} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
-                                    View all
                                 </button>
-                            </div>
-                            {totalCollectionTarget > 0 && (
-                                <p className="mb-3 text-[11px] text-muted-foreground">
-                                    {formatPeso(totalCollected)} of {formatPeso(totalCollectionTarget)} collected
-                                </p>
                             )}
-                            <div className="space-y-3">
-                                {collections.map((col) => {
-                                    const paid = collectionPayments.filter((p) => p.collectionId === col.id).reduce((s, p) => s + p.amount, 0);
-                                    const pct = col.targetAmount > 0 ? Math.min(100, (paid / col.targetAmount) * 100) : 0;
-                                    const done = paid >= col.targetAmount;
-                                    const unpaidMemberIds = collectionMemberStatus(col.id, col.memberIds, col.targetAmount);
-                                    const unpaidNames = unpaidMemberIds.map((id) => memberById[id]?.name).filter(Boolean);
-                                    return (
-                                        <div key={col.id}>
-                                            <div className="mb-1 flex items-center justify-between text-xs">
-                                                <span className="font-medium">{col.name}</span>
-                                                <span className={cn('tabular-nums', done ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground')}>
-                                                    {formatPeso(paid)} / {formatPeso(col.targetAmount)}
-                                                </span>
+
+                            {/* Budget Status */}
+                            {totalBudget > 0 && (
+                                <button type="button" onClick={() => onNavigate('budget')} className="w-full text-left">
+                                    <Card className="h-full transition-colors hover:bg-muted/40">
+                                        <CardContent className="flex h-full flex-col justify-between p-5">
+                                            <div>
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Budget Status</p>
+                                                <div className="mt-3 flex items-center justify-between text-sm">
+                                                    <span className="text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</span>
+                                                    <span className={cn('font-bold tabular-nums', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+                                                        {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                                                    <span>Total budget</span>
+                                                    <span className="tabular-nums">{formatPeso(totalBudget)}</span>
+                                                </div>
+                                                <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                                                    <div
+                                                        className={cn('h-full rounded-full transition-all', isOverBudget ? 'bg-destructive' : 'bg-indigo-500')}
+                                                        style={{ width: `${budgetPct}%` }}
+                                                    />
+                                                </div>
+                                                <p className="mt-1.5 text-[11px] text-muted-foreground">Budget Used: {Math.round(budgetPct)}%</p>
                                             </div>
-                                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                                                <div className={cn('h-full rounded-full transition-all', done ? 'bg-green-500' : 'bg-indigo-500')} style={{ width: `${pct}%` }} />
-                                            </div>
-                                            {!done && unpaidNames.length > 0 && (
-                                                <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
-                                                    ⚠️ {unpaidNames.length === 1 ? unpaidNames[0] : `${unpaidNames.slice(0, 2).join(', ')}${unpaidNames.length > 2 ? ` +${unpaidNames.length - 2}` : ''}`} haven't paid
+                                            {perPersonRemaining !== null && members.length > 1 && (
+                                                <p className="mt-3 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+                                                    ≈ {formatPeso(perPersonRemaining)} per person remaining
                                                 </p>
                                             )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Recent expenses */}
-                {recentExpenses.length > 0 && (
-                    <Card className="h-full">
-                        <CardContent className="p-4">
-                            <div className="mb-2 flex items-center justify-between">
-                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recent Expenses</span>
-                                <button type="button" onClick={() => onNavigate('expenses')} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
-                                    View all
+                                        </CardContent>
+                                    </Card>
                                 </button>
-                            </div>
-                            {biggestSpenderMember && activeExpenses.length > 1 && (
-                                <p className="mb-2 text-[11px] text-muted-foreground">
-                                    🏆 <span className="font-medium text-foreground">{biggestSpenderMember.name}</span> paid the most — {formatPeso(biggestSpender![1])}
-                                </p>
                             )}
-                            <div className="divide-y">
-                                {recentExpenses.map((e) => {
-                                    const paidBy = memberById[e.paidById];
-                                    return (
-                                        <div key={e.id} className="flex items-center gap-3 py-2">
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate text-sm font-medium">{e.description}</p>
-                                                <p className="text-[11px] text-muted-foreground">
-                                                    {paidBy?.name ?? '?'} · {new Date(e.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
-                                                </p>
-                                            </div>
-                                            <p className="text-sm font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{formatPeso(e.amount)}</p>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                        </div>
+                    )}
 
-            </div>
+                    {/* ── Expense Distribution + Recent Activity ── */}
+                    {(chartCategories.length > 0 || recentExpenses.length > 0) && (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {chartCategories.length > 0 && (
+                                <Card>
+                                    <CardContent className="p-5">
+                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Expense Distribution</p>
+                                        <p className="mb-4 text-[11px] text-muted-foreground">Breakdown by category</p>
+                                        <div className="flex h-36 items-end gap-2">
+                                            {chartCategories.map(({ key, amount, meta }) => (
+                                                <div key={key} className="flex flex-1 flex-col items-center gap-1">
+                                                    <span className="text-[10px] tabular-nums text-muted-foreground leading-none">
+                                                        {formatPeso(amount)}
+                                                    </span>
+                                                    <div
+                                                        className={cn('w-full rounded-t-md', meta.progressColorClass)}
+                                                        style={{ height: `${(amount / maxCategorySpend) * 100}%`, minHeight: '6px' }}
+                                                    />
+                                                    <span className="w-full truncate text-center text-[10px] text-muted-foreground">{meta.shortLabel}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {recentExpenses.length > 0 && (
+                                <Card>
+                                    <CardContent className="p-5">
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Recent Activity</p>
+                                            <button type="button" onClick={() => onNavigate('expenses')} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                                                View all
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {recentExpenses.map((e) => {
+                                                const paidBy = memberById[e.paidById];
+                                                const meta = allCategories[e.category];
+                                                return (
+                                                    <div key={e.id} className="flex items-center gap-3">
+                                                        <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg text-sm', meta?.bgClass ?? 'bg-muted')}>
+                                                            {meta?.icon ?? '📌'}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate text-sm font-medium">{e.description}</p>
+                                                            <p className="text-[11px] text-muted-foreground">
+                                                                {paidBy?.name ?? '?'} · {new Date(e.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+                                                            </p>
+                                                        </div>
+                                                        <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
+                                                            −{formatPeso(e.amount)}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Member Balances + Collections ── */}
+                    {(activeBudgetItems.length > 0 || collections.length > 0) && (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {/* Member Balances */}
+                            {members.length > 0 && activeBudgetItems.length > 0 && (
+                                <Card>
+                                    <CardContent className="p-5">
+                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Member Balances</p>
+                                        <p className="mb-3 text-[11px] text-muted-foreground">Who owes what</p>
+                                        <div className="space-y-2.5">
+                                            {memberBalanceSummaries.map(({ member, share, advance, remaining: memberRemaining }) => {
+                                                const isMe = member.id === myMemberId;
+                                                const isSettled = memberRemaining <= 0.005;
+                                                const isOverpaid = advance > share + 0.005;
+                                                return (
+                                                    <div key={member.id} className={cn('flex items-center gap-3 rounded-xl px-3 py-2', isMe && 'bg-indigo-50 dark:bg-indigo-950/20')}>
+                                                        <span className={cn(
+                                                            'inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white',
+                                                            avatarColor(members, member.id),
+                                                        )}>
+                                                            {getInitials(member.name)}
+                                                        </span>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate text-sm font-medium">
+                                                                {member.name}
+                                                                {isMe && <span className="ml-1.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">YOU</span>}
+                                                            </p>
+                                                        </div>
+                                                        {isSettled ? (
+                                                            <span className={cn(
+                                                                'rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                                                                isOverpaid
+                                                                    ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400'
+                                                                    : 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400',
+                                                            )}>
+                                                                {isOverpaid ? 'Overpaid' : 'Paid'}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[11px] font-bold tabular-nums text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                                                                −{formatPeso(memberRemaining)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Collections */}
+                            {collections.length > 0 && (
+                                <Card>
+                                    <CardContent className="p-5">
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Collections</p>
+                                            <button type="button" onClick={() => onNavigate('collections')} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                                                View all
+                                            </button>
+                                        </div>
+                                        {totalCollectionTarget > 0 && (
+                                            <p className="mb-3 text-[11px] text-muted-foreground">
+                                                {formatPeso(totalCollected)} of {formatPeso(totalCollectionTarget)} collected
+                                            </p>
+                                        )}
+                                        <div className="space-y-3">
+                                            {collections.map((col) => {
+                                                const paid = collectionPayments.filter((p) => p.collectionId === col.id).reduce((s, p) => s + p.amount, 0);
+                                                const pct = col.targetAmount > 0 ? Math.min(100, (paid / col.targetAmount) * 100) : 0;
+                                                const done = paid >= col.targetAmount;
+                                                const unpaidMemberIds = collectionMemberStatus(col.id, col.memberIds, col.targetAmount);
+                                                const unpaidNames = unpaidMemberIds.map((id) => memberById[id]?.name).filter(Boolean);
+                                                return (
+                                                    <div key={col.id}>
+                                                        <div className="mb-1 flex items-center justify-between text-xs">
+                                                            <span className="font-medium">{col.name}</span>
+                                                            <span className={cn('tabular-nums', done ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground')}>
+                                                                {formatPeso(paid)} / {formatPeso(col.targetAmount)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                                            <div className={cn('h-full rounded-full transition-all', done ? 'bg-green-500' : 'bg-indigo-500')} style={{ width: `${pct}%` }} />
+                                                        </div>
+                                                        {!done && unpaidNames.length > 0 && (
+                                                            <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                                                                ⚠️ {unpaidNames.length === 1 ? unpaidNames[0] : `${unpaidNames.slice(0, 2).join(', ')}${unpaidNames.length > 2 ? ` +${unpaidNames.length - 2}` : ''}`} haven't paid
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     );
 }
