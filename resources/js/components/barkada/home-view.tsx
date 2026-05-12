@@ -76,9 +76,9 @@ function TripEditForm({ trip, onSave, onCancel }: { trip: Trip; onSave: (t: Trip
     const set = (key: keyof Trip) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setForm((p) => ({ ...p, [key]: e.target.value }));
     return (
-        <Card>
-            <CardHeader><CardTitle className="text-base">Edit Trip Details</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
+        <Card className="gap-0 py-0">
+            <CardHeader className="px-5 pt-5 pb-0"><CardTitle className="text-base">Edit Trip Details</CardTitle></CardHeader>
+            <CardContent className="space-y-4 p-5">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {([
                         { key: 'name' as const, label: 'Trip Name', type: 'text', placeholder: 'Batangas Beach Trip' },
@@ -289,7 +289,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                             {/* Budget Status */}
                             {totalBudget > 0 && (
                                 <button type="button" onClick={() => onNavigate('budget')} className="w-full text-left">
-                                    <Card className="h-full transition-colors hover:bg-muted/40">
+                                    <Card className="h-full gap-0 py-0 transition-colors hover:bg-muted/40">
                                         <CardContent className="flex h-full flex-col justify-between p-5">
                                             <div>
                                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Budget Status</p>
@@ -327,7 +327,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                     {(chartCategories.length > 0 || recentExpenses.length > 0) && (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             {chartCategories.length > 0 && (
-                                <Card>
+                                <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
                                         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Expense Distribution</p>
                                         <p className="mb-4 text-[11px] text-muted-foreground">Breakdown by category</p>
@@ -350,7 +350,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                             )}
 
                             {recentExpenses.length > 0 && (
-                                <Card>
+                                <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
                                         <div className="mb-3 flex items-center justify-between">
                                             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Recent Activity</p>
@@ -391,7 +391,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             {/* Member Balances */}
                             {members.length > 0 && activeBudgetItems.length > 0 && (
-                                <Card>
+                                <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
                                         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Member Balances</p>
                                         <p className="mb-3 text-[11px] text-muted-foreground">Who owes what</p>
@@ -438,7 +438,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
 
                             {/* Collections */}
                             {collections.length > 0 && (
-                                <Card>
+                                <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
                                         <div className="mb-2 flex items-center justify-between">
                                             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Collections</p>
