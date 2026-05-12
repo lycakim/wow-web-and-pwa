@@ -414,7 +414,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                         </div>
                     ) : (
                         <>
-                            {view === 'home' && <HomeView store={store} onUpdateTrip={updateTrip} />}
+                            {view === 'home' && <HomeView store={store} onUpdateTrip={updateTrip} onNavigate={setView} />}
                             {view === 'members' && (
                                 <MembersView
                                     members={store.members}

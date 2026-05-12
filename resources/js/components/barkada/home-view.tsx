@@ -1,37 +1,39 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getSpendByCategory, getTotalBudget, getTotalSpend } from '@/hooks/use-barkada-store';
+import { calculateSettlements, getSpendByCategory, getTotalBudget, getTotalSpend } from '@/hooks/use-barkada-store';
 import { cn } from '@/lib/utils';
-import type { BarkadaStore, Trip } from '@/types/barkada';
-import { getActiveBudgetItems, getActiveExpenses, getAllCategories, getAllCategoryKeys, getBudgetByCategory } from '@/types/barkada';
-import { CalendarDays, MapPin, Pencil, ReceiptText, Users } from 'lucide-react';
-import { useState } from 'react';
+import type { BarkadaStore, Member, Trip, View } from '@/types/barkada';
+import { calculateMemberBudgetShare, getActiveBudgetItems, getActiveExpenses } from '@/types/barkada';
+import { ArrowRight, CalendarDays, HandCoins, MapPin, Pencil, ReceiptText, Users, Vault, Wallet } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-interface HomeViewProps {
-    store: BarkadaStore;
-    onUpdateTrip: (trip: Trip) => void;
+const MY_MEMBER_KEY = 'barkada-my-member-id';
+
+const AVATAR_COLORS = [
+    'bg-indigo-500', 'bg-violet-500', 'bg-pink-500', 'bg-orange-500',
+    'bg-green-500', 'bg-blue-500', 'bg-teal-500', 'bg-rose-500',
+];
+
+function getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+}
+
+function avatarColor(members: Member[], id: string): string {
+    const i = members.findIndex((m) => m.id === id);
+    return AVATAR_COLORS[(i >= 0 ? i : 0) % AVATAR_COLORS.length];
 }
 
 function formatPeso(amount: number): string {
     return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function ProgressBar({ value, max, colorClass }: { value: number; max: number; colorClass: string }) {
-    const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
-    const isOver = max > 0 && value > max;
-
-    return (
-        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-            <div
-                className={cn('h-full rounded-full transition-all', isOver ? 'bg-destructive' : colorClass)}
-                style={{ width: `${pct}%` }}
-            />
-        </div>
-    );
+interface HomeViewProps {
+    store: BarkadaStore;
+    onUpdateTrip: (trip: Trip) => void;
+    onNavigate: (view: View) => void;
 }
 
 function TripEditForm({ trip, onSave, onCancel }: { trip: Trip; onSave: (t: Trip) => void; onCancel: () => void }) {
@@ -45,7 +47,7 @@ function TripEditForm({ trip, onSave, onCancel }: { trip: Trip; onSave: (t: Trip
                 <CardTitle className="text-base">Edit Trip Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {(
                         [
                             { key: 'name' as const, label: 'Trip Name', type: 'text', placeholder: 'Batangas Beach Trip' },
@@ -56,67 +58,85 @@ function TripEditForm({ trip, onSave, onCancel }: { trip: Trip; onSave: (t: Trip
                     ).map(({ key, label, type, placeholder }) => (
                         <div key={key} className="space-y-1.5">
                             <Label htmlFor={`trip-${key}`}>{label}</Label>
-                            <Input
-                                id={`trip-${key}`}
-                                type={type}
-                                value={form[key]}
-                                onChange={set(key)}
-                                placeholder={placeholder}
-                            />
+                            <Input id={`trip-${key}`} type={type} value={form[key]} onChange={set(key)} placeholder={placeholder} />
                         </div>
                     ))}
                 </div>
                 <div className="flex gap-2 pt-1">
-                    <Button onClick={() => onSave(form)} className="flex-1 bg-indigo-600 hover:bg-indigo-700">
-                        Save
-                    </Button>
-                    <Button variant="outline" onClick={onCancel} className="flex-1">
-                        Cancel
-                    </Button>
+                    <Button onClick={() => onSave(form)} className="flex-1 bg-indigo-600 hover:bg-indigo-700">Save</Button>
+                    <Button variant="outline" onClick={onCancel} className="flex-1">Cancel</Button>
                 </div>
             </CardContent>
         </Card>
     );
 }
 
-export function HomeView({ store, onUpdateTrip }: HomeViewProps) {
+export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const { trip, members } = store;
+    const [myMemberId, setMyMemberId] = useState('');
+
+    const { trip, members, collections, collectionPayments, carpools } = store;
     const activeExpenses = getActiveExpenses(store);
     const activeBudgetItems = getActiveBudgetItems(store);
     const totalBudget = getTotalBudget(activeBudgetItems);
     const totalSpend = getTotalSpend(activeExpenses);
-    const spendByCategory = getSpendByCategory(activeExpenses);
-    const budgetByCategory = getBudgetByCategory(activeBudgetItems);
     const remaining = totalBudget - totalSpend;
     const isOverBudget = remaining < 0;
     const hasTrip = trip.name || trip.destination;
-    const allCategories = getAllCategories(store);
-    const allCategoryKeys = getAllCategoryKeys(store);
+    const settlements = calculateSettlements(members, activeExpenses, collections, collectionPayments);
+
+    // Load "I am" selection (shared with My Balance page)
+    useEffect(() => {
+        const saved = localStorage.getItem(MY_MEMBER_KEY);
+        if (saved && members.some((m) => m.id === saved)) {
+            setMyMemberId(saved);
+        } else if (members.length > 0) {
+            setMyMemberId(members[0].id);
+        }
+    }, [members]);
+
+    const me = members.find((m) => m.id === myMemberId);
+    const myBudgetShare = me
+        ? calculateMemberBudgetShare(myMemberId, activeBudgetItems, carpools, members.length)
+            + (members.length > 0 ? ((store.budgetBuffer > 0 ? totalBudget * store.budgetBuffer / 100 : 0) + (store.contingency ?? 0)) / members.length : 0)
+        : 0;
+    const myAdvancePaid = collectionPayments
+        .filter((p) => p.fromMemberId === myMemberId)
+        .reduce((s, p) => s + p.amount, 0);
+    const myStillNeeded = Math.max(0, myBudgetShare - myAdvancePaid);
+
+    // Collections summary
+    const totalCollected = collectionPayments.reduce((s, p) => s + p.amount, 0);
+    const totalCollectionTarget = collections.reduce((s, c) => s + c.targetAmount, 0);
+    const activeCollections = collections.filter((c) => {
+        const paid = collectionPayments.filter((p) => p.collectionId === c.id).reduce((s, p) => s + p.amount, 0);
+        return paid < c.targetAmount;
+    });
+
+    // Recent expenses (last 4)
+    const recentExpenses = activeExpenses.slice(0, 4);
+    const spendByCategory = getSpendByCategory(activeExpenses);
+    const memberById = Object.fromEntries(members.map((m) => [m.id, m]));
+
+    const budgetPct = totalBudget > 0 ? Math.min(100, (totalSpend / totalBudget) * 100) : 0;
 
     return (
         <div className="space-y-4 p-4">
+            {/* Trip hero */}
             {isEditing ? (
-                <TripEditForm
-                    trip={trip}
-                    onSave={(t) => {
-                        onUpdateTrip(t);
-                        setIsEditing(false);
-                    }}
-                    onCancel={() => setIsEditing(false)}
-                />
+                <TripEditForm trip={trip} onSave={(t) => { onUpdateTrip(t); setIsEditing(false); }} onCancel={() => setIsEditing(false)} />
             ) : (
                 <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 p-5 text-white shadow-lg">
                     <button
                         onClick={() => setIsEditing(true)}
-                        className="absolute top-3 right-3 rounded-full bg-white/20 p-1.5 transition hover:bg-white/30"
+                        className="absolute right-3 top-3 rounded-full bg-white/20 p-1.5 transition hover:bg-white/30"
                         aria-label="Edit trip details"
                     >
                         <Pencil className="size-3.5" />
                     </button>
                     {hasTrip ? (
                         <>
-                            <p className="text-xs font-medium tracking-widest text-white/70 uppercase">Barkada Trip</p>
+                            <p className="text-xs font-medium uppercase tracking-widest text-white/70">Barkada Trip</p>
                             <h2 className="mt-1 text-2xl font-bold">{trip.name || 'Unnamed Trip'}</h2>
                             {trip.destination && (
                                 <div className="mt-1.5 flex items-center gap-1 text-sm text-white/80">
@@ -128,19 +148,9 @@ export function HomeView({ store, onUpdateTrip }: HomeViewProps) {
                                 <div className="mt-1 flex items-center gap-1 text-sm text-white/80">
                                     <CalendarDays className="size-3.5" />
                                     <span>
-                                        {trip.startDate &&
-                                            new Date(trip.startDate).toLocaleDateString('en-PH', {
-                                                month: 'short',
-                                                day: 'numeric',
-                                                year: 'numeric',
-                                            })}
+                                        {trip.startDate && new Date(trip.startDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                                         {trip.startDate && trip.endDate && ' – '}
-                                        {trip.endDate &&
-                                            new Date(trip.endDate).toLocaleDateString('en-PH', {
-                                                month: 'short',
-                                                day: 'numeric',
-                                                year: 'numeric',
-                                            })}
+                                        {trip.endDate && new Date(trip.endDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </span>
                                 </div>
                             )}
@@ -154,124 +164,219 @@ export function HomeView({ store, onUpdateTrip }: HomeViewProps) {
                 </div>
             )}
 
-            {/* Quick stats */}
-            <div className="grid grid-cols-2 gap-3">
-                <Card className="gap-3 py-4">
-                    <CardContent className="flex items-center gap-3 px-4">
-                        <div className="flex size-9 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30">
-                            <Users className="size-4 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold">{members.length}</p>
-                            <p className="text-xs text-muted-foreground">Members</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="gap-3 py-4">
-                    <CardContent className="flex items-center gap-3 px-4">
-                        <div className="flex size-9 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30">
-                            <ReceiptText className="size-4 text-violet-600 dark:text-violet-400" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold">{store.expenses.length}</p>
-                            <p className="text-xs text-muted-foreground">Expenses</p>
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* 4-stat grid */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <button type="button" onClick={() => onNavigate('members')} className="text-left">
+                    <Card className="h-full gap-2 py-4 transition-colors hover:bg-muted/40">
+                        <CardContent className="flex items-center gap-3 px-4">
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30">
+                                <Users className="size-4 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold">{members.length}</p>
+                                <p className="text-xs text-muted-foreground">Members</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </button>
+                <button type="button" onClick={() => onNavigate('expenses')} className="text-left">
+                    <Card className="h-full gap-2 py-4 transition-colors hover:bg-muted/40">
+                        <CardContent className="flex items-center gap-3 px-4">
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30">
+                                <ReceiptText className="size-4 text-violet-600 dark:text-violet-400" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold">{activeExpenses.length}</p>
+                                <p className="text-xs text-muted-foreground">Expenses</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </button>
+                <button type="button" onClick={() => onNavigate('collections')} className="text-left">
+                    <Card className="h-full gap-2 py-4 transition-colors hover:bg-muted/40">
+                        <CardContent className="flex items-center gap-3 px-4">
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+                                <Vault className="size-4 text-orange-600 dark:text-orange-400" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold">{activeCollections.length}</p>
+                                <p className="text-xs text-muted-foreground">Collections</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </button>
+                <button type="button" onClick={() => onNavigate('settlement')} className="text-left">
+                    <Card className="h-full gap-2 py-4 transition-colors hover:bg-muted/40">
+                        <CardContent className="flex items-center gap-3 px-4">
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                                <HandCoins className="size-4 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold">{settlements.length}</p>
+                                <p className="text-xs text-muted-foreground">Settlements</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </button>
             </div>
 
-            {/* Budget overview */}
-            <Card className="gap-4 py-4">
-                <CardHeader className="px-4">
-                    <CardTitle className="text-sm">Budget Overview</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 px-4">
-                    <div className="flex items-end justify-between">
-                        <div>
-                            <p className="text-2xl font-bold">{formatPeso(totalSpend)}</p>
-                            <p className="text-xs text-muted-foreground">Total spent</p>
-                        </div>
-                        {totalBudget > 0 && (
-                            <div className="text-right">
-                                <p
-                                    className={cn(
-                                        'text-lg font-semibold',
-                                        isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400',
-                                    )}
-                                >
-                                    {isOverBudget ? '-' : ''}
-                                    {formatPeso(Math.abs(remaining))}
+            {/* My balance card */}
+            {me && myBudgetShare > 0 && (
+                <button type="button" onClick={() => onNavigate('mybalance')} className="w-full text-left">
+                    <Card className="overflow-hidden transition-colors hover:bg-muted/40">
+                        <CardContent className="flex items-center gap-4 p-4">
+                            <span className={cn(
+                                'inline-flex size-10 shrink-0 items-center justify-center rounded-full font-bold text-white text-sm',
+                                avatarColor(members, myMemberId),
+                            )}>
+                                {getInitials(me.name)}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-xs text-muted-foreground">Hi, {me.name.split(' ')[0]}! You still need to bring</p>
+                                <p className={cn('text-xl font-bold tabular-nums', myStillNeeded === 0 ? 'text-green-600 dark:text-green-400' : 'text-indigo-600 dark:text-indigo-400')}>
+                                    {myStillNeeded === 0 ? "You're all paid up! 🎉" : formatPeso(myStillNeeded)}
                                 </p>
-                                <p className="text-xs text-muted-foreground">{isOverBudget ? 'over budget' : 'remaining'}</p>
+                                {myAdvancePaid > 0 && (
+                                    <p className="text-xs text-muted-foreground">{formatPeso(myAdvancePaid)} advance paid · {formatPeso(myBudgetShare)} total share</p>
+                                )}
                             </div>
+                            <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                        </CardContent>
+                    </Card>
+                </button>
+            )}
+
+            {/* Budget overview */}
+            {(totalBudget > 0 || totalSpend > 0) && (
+                <button type="button" onClick={() => onNavigate('budget')} className="w-full text-left">
+                    <Card className="transition-colors hover:bg-muted/40">
+                        <CardContent className="p-4">
+                            <div className="mb-3 flex items-center gap-2">
+                                <Wallet className="size-4 text-muted-foreground" />
+                                <span className="text-sm font-semibold">Budget</span>
+                                <ArrowRight className="ml-auto size-4 text-muted-foreground" />
+                            </div>
+                            <div className="flex items-end justify-between">
+                                <div>
+                                    <p className="text-2xl font-bold tabular-nums">{formatPeso(totalSpend)}</p>
+                                    <p className="text-xs text-muted-foreground">spent</p>
+                                </div>
+                                {totalBudget > 0 && (
+                                    <div className="text-right">
+                                        <p className={cn('text-lg font-semibold tabular-nums', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+                                            {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">{isOverBudget ? 'over budget' : 'remaining'}</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+                                <div
+                                    className={cn('h-full rounded-full transition-all', isOverBudget ? 'bg-destructive' : 'bg-indigo-500')}
+                                    style={{ width: `${budgetPct}%` }}
+                                />
+                            </div>
+                            {totalBudget > 0 && (
+                                <p className="mt-1.5 text-right text-xs text-muted-foreground">of {formatPeso(totalBudget)}</p>
+                            )}
+                        </CardContent>
+                    </Card>
+                </button>
+            )}
+
+            {/* Active collections */}
+            {collections.length > 0 && (
+                <Card>
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm">Collections</CardTitle>
+                            <button type="button" onClick={() => onNavigate('collections')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                                View all
+                            </button>
+                        </div>
+                        {totalCollectionTarget > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                                {formatPeso(totalCollected)} collected of {formatPeso(totalCollectionTarget)} total
+                            </p>
                         )}
-                    </div>
-                    <ProgressBar
-                        value={totalSpend}
-                        max={totalBudget > 0 ? totalBudget : totalSpend > 0 ? totalSpend : 1}
-                        colorClass="bg-indigo-500"
-                    />
-                    {totalBudget > 0 && (
-                        <p className="text-right text-xs text-muted-foreground">of {formatPeso(totalBudget)} budget</p>
-                    )}
-                </CardContent>
-            </Card>
+                    </CardHeader>
+                    <CardContent className="space-y-3 px-4 pb-4">
+                        {collections.map((col) => {
+                            const paid = collectionPayments
+                                .filter((p) => p.collectionId === col.id)
+                                .reduce((s, p) => s + p.amount, 0);
+                            const pct = col.targetAmount > 0 ? Math.min(100, (paid / col.targetAmount) * 100) : 0;
+                            const done = paid >= col.targetAmount;
+                            return (
+                                <div key={col.id}>
+                                    <div className="mb-1 flex items-center justify-between text-xs">
+                                        <span className="font-medium">{col.name}</span>
+                                        <span className={cn('tabular-nums', done ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground')}>
+                                            {formatPeso(paid)} / {formatPeso(col.targetAmount)}
+                                        </span>
+                                    </div>
+                                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                        <div
+                                            className={cn('h-full rounded-full transition-all', done ? 'bg-green-500' : 'bg-indigo-500')}
+                                            style={{ width: `${pct}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </CardContent>
+                </Card>
+            )}
 
-            {/* Per-category breakdown */}
-            <Card className="gap-4 py-4">
-                <CardHeader className="px-4">
-                    <CardTitle className="text-sm">By Category</CardTitle>
-                </CardHeader>
-                <CardContent className="px-0 pb-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="pl-6">Category</TableHead>
-                                <TableHead className="text-right">Spent</TableHead>
-                                <TableHead className="text-right">Budget</TableHead>
-                                <TableHead className="pr-6 min-w-28">Progress</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {allCategoryKeys.map((cat) => {
-                                const meta = allCategories[cat];
-                                const spent = spendByCategory[cat] ?? 0;
-                                const budget = budgetByCategory[cat] ?? 0;
-                                const isOver = budget > 0 && spent > budget;
-
+            {/* Recent expenses */}
+            {recentExpenses.length > 0 && (
+                <Card>
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm">Recent Expenses</CardTitle>
+                            <button type="button" onClick={() => onNavigate('expenses')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                                View all
+                            </button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="px-0 pb-2">
+                        <div className="divide-y">
+                            {recentExpenses.map((e) => {
+                                const paidBy = memberById[e.paidById];
                                 return (
-                                    <TableRow key={cat}>
-                                        <TableCell className="pl-6">
-                                            <div className="flex items-center gap-2">
-                                                <span>{meta.icon}</span>
-                                                <Badge
-                                                    variant="outline"
-                                                    className={cn('border-0 text-xs', meta.bgClass, meta.textClass)}
-                                                >
-                                                    {meta.shortLabel}
-                                                </Badge>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium tabular-nums">
-                                            {formatPeso(spent)}
-                                        </TableCell>
-                                        <TableCell className="text-right tabular-nums text-muted-foreground">
-                                            {budget > 0 ? formatPeso(budget) : '—'}
-                                        </TableCell>
-                                        <TableCell className="pr-6">
-                                            <ProgressBar
-                                                value={spent}
-                                                max={budget > 0 ? budget : spent > 0 ? spent : 1}
-                                                colorClass={isOver ? 'bg-destructive' : meta.progressColorClass}
-                                            />
-                                        </TableCell>
-                                    </TableRow>
+                                    <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate text-sm font-medium">{e.description}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                paid by {paidBy?.name ?? '?'} · {new Date(e.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+                                            </p>
+                                        </div>
+                                        <p className="text-sm font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{formatPeso(e.amount)}</p>
+                                    </div>
                                 );
                             })}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Settlement nudge */}
+            {settlements.length > 0 && (
+                <button type="button" onClick={() => onNavigate('settlement')} className="w-full text-left">
+                    <Card className="border-orange-200 bg-orange-50 transition-colors hover:bg-orange-100 dark:border-orange-900/40 dark:bg-orange-950/20 dark:hover:bg-orange-950/30">
+                        <CardContent className="flex items-center gap-3 p-4">
+                            <HandCoins className="size-5 shrink-0 text-orange-600 dark:text-orange-400" />
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">
+                                    {settlements.length} payment{settlements.length !== 1 ? 's' : ''} needed
+                                </p>
+                                <p className="text-xs text-orange-600 dark:text-orange-400">Tap to see who owes whom</p>
+                            </div>
+                            <ArrowRight className="size-4 shrink-0 text-orange-500" />
+                        </CardContent>
+                    </Card>
+                </button>
+            )}
         </div>
     );
 }
