@@ -53,17 +53,20 @@ const TRIP_CODE_KEY = 'barkada-trip-code';
 
 type NavItem = { view: View; label: string; icon: React.ElementType };
 
-const NAV_ITEMS: NavItem[] = [
+const MAIN_NAV: NavItem[] = [
     { view: 'home', label: 'Home', icon: Home },
+    { view: 'mybalance', label: 'My Balance', icon: ArrowLeftRight },
+    { view: 'expenses', label: 'Expenses', icon: ReceiptText },
+    { view: 'collections', label: 'Collections', icon: Vault },
+    { view: 'grocery', label: 'Grocery', icon: ShoppingCart },
+    { view: 'settlement', label: 'Settlement', icon: HandCoins },
+];
+
+const SETUP_NAV: NavItem[] = [
     { view: 'members', label: 'Members', icon: Users },
     { view: 'budget', label: 'Budget', icon: Wallet },
-    { view: 'expenses', label: 'Expenses', icon: ReceiptText },
-    { view: 'settlement', label: 'Settlement', icon: HandCoins },
-    { view: 'categories', label: 'Categories', icon: Tag },
     { view: 'carpools', label: 'Carpools', icon: Car },
-    { view: 'grocery', label: 'Grocery', icon: ShoppingCart },
-    { view: 'collections', label: 'Collections', icon: Vault },
-    { view: 'mybalance', label: 'My Balance', icon: ArrowLeftRight },
+    { view: 'categories', label: 'Categories', icon: Tag },
 ];
 
 const VIEW_LABELS: Record<View, string> = {
@@ -99,17 +102,17 @@ function useDarkMode() {
     return { dark, toggle };
 }
 
-function NavMenu({ view, setView }: { view: View; setView: (v: View) => void }) {
+function NavGroup({ items, view, onNav }: { items: NavItem[]; view: View; onNav: (v: View) => void }) {
     const { setOpenMobile } = useSidebar();
 
     const handleNav = (v: View) => {
-        setView(v);
+        onNav(v);
         setOpenMobile(false);
     };
 
     return (
         <SidebarMenu>
-            {NAV_ITEMS.map(({ view: itemView, label, icon: Icon }) => (
+            {items.map(({ view: itemView, label, icon: Icon }) => (
                 <SidebarMenuItem key={itemView}>
                     <SidebarMenuButton
                         isActive={view === itemView}
@@ -279,8 +282,12 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
 
                 <SidebarContent>
                     <SidebarGroup className="px-2 py-0">
-                        <SidebarGroupLabel>Barkada Planner</SidebarGroupLabel>
-                        <NavMenu view={view} setView={setView} />
+                        <SidebarGroupLabel>Main</SidebarGroupLabel>
+                        <NavGroup items={MAIN_NAV} view={view} onNav={setView} />
+                    </SidebarGroup>
+                    <SidebarGroup className="px-2 py-0">
+                        <SidebarGroupLabel>Setup</SidebarGroupLabel>
+                        <NavGroup items={SETUP_NAV} view={view} onNav={setView} />
                     </SidebarGroup>
                 </SidebarContent>
 
