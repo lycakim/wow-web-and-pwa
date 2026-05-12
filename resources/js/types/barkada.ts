@@ -1,6 +1,6 @@
 export type Category = string;
 
-export type View = 'home' | 'members' | 'budget' | 'expenses' | 'settlement' | 'categories' | 'carpools' | 'grocery';
+export type View = 'home' | 'members' | 'budget' | 'expenses' | 'settlement' | 'categories' | 'carpools' | 'grocery' | 'collections';
 
 export interface Member {
     id: string;
@@ -54,6 +54,8 @@ export interface BarkadaStore {
     hiddenBuiltInCategories: string[]; // built-in category keys hidden by the user
     inactiveCategories: string[]; // category keys excluded from all calculations
     groceryItems: GroceryItem[];
+    collections: Collection[];
+    collectionPayments: CollectionPayment[];
 }
 
 export type GrocerySection = 'buy' | 'bring' | 'meal';
@@ -63,6 +65,26 @@ export const GROCERY_SECTIONS: { key: GrocerySection; label: string; icon: strin
     { key: 'bring', label: 'To Bring', icon: '🎒', emptyText: 'No items to bring yet' },
     { key: 'meal', label: 'Meal Plan', icon: '🍽️', emptyText: 'No meals planned yet' },
 ];
+
+export interface Collection {
+    id: string;
+    name: string;
+    targetAmount: number;
+    collectorId: string; // member who receives the money
+    memberIds: string[]; // who is splitting the target (default: all members)
+    createdAt: string;
+}
+
+export interface CollectionPayment {
+    id: string;
+    collectionId: string;
+    fromMemberId: string;
+    amount: number;
+    note?: string;
+    paidAt: string;
+    createdAt: string;
+    loggedByName?: string;
+}
 
 export interface GroceryItem {
     id: string;

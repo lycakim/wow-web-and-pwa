@@ -12,6 +12,7 @@ if ('serviceWorker' in navigator) {
 }
 
 import { BudgetView } from '@/components/barkada/budget-view';
+import { CollectionsView } from '@/components/barkada/collections-view';
 import { GroceryView } from '@/components/barkada/grocery-view';
 import { CarpoolsView } from '@/components/barkada/carpools-view';
 import { CategoriesView } from '@/components/barkada/categories-view';
@@ -42,7 +43,7 @@ import {
 import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
-import { ArrowLeftRight, Bell, BellOff, Car, Check, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
+import { ArrowLeftRight, Bell, BellOff, Car, Check, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Vault, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -60,6 +61,7 @@ const NAV_ITEMS: NavItem[] = [
     { view: 'categories', label: 'Categories', icon: Tag },
     { view: 'carpools', label: 'Carpools', icon: Car },
     { view: 'grocery', label: 'Grocery', icon: ShoppingCart },
+    { view: 'collections', label: 'Collections', icon: Vault },
 ];
 
 const VIEW_LABELS: Record<View, string> = {
@@ -71,6 +73,7 @@ const VIEW_LABELS: Record<View, string> = {
     categories: 'Categories',
     carpools: 'Carpools',
     grocery: 'Grocery',
+    collections: 'Collections',
 };
 
 function useDarkMode() {
@@ -160,6 +163,10 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
         removeGroceryItem,
         renameGroceryItem,
         clearCheckedGroceryItems,
+        addCollection,
+        removeCollection,
+        addCollectionPayment,
+        removeCollectionPayment,
     } = useTripStore(tripId);
 
     const { isSubscribed: notifSubscribed, isLoading: notifLoading, isSupported: notifSupported, subscribe: subscribeToNotifs, unsubscribe: unsubscribeFromNotifs } = usePushNotifications(tripId, currentUserName);
@@ -449,6 +456,16 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                                     onRemove={removeGroceryItem}
                                     onRename={renameGroceryItem}
                                     onClearChecked={clearCheckedGroceryItems}
+                                />
+                            )}
+                            {view === 'collections' && (
+                                <CollectionsView
+                                    store={store}
+                                    currentUserName={currentUserName || undefined}
+                                    onAddCollection={addCollection}
+                                    onRemoveCollection={removeCollection}
+                                    onAddPayment={addCollectionPayment}
+                                    onRemovePayment={removeCollectionPayment}
                                 />
                             )}
                         </>
