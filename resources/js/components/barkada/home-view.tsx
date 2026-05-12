@@ -137,7 +137,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
     const budgetPct = totalBudget > 0 ? Math.min(100, (totalSpend / totalBudget) * 100) : 0;
 
     return (
-        <div className="space-y-4 p-4">
+        <div className="space-y-3 p-3">
             {/* Trip hero + stat ribbon */}
             {isEditing ? (
                 <TripEditForm
@@ -148,7 +148,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
             ) : (
                 <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-lg">
                     {/* Main info */}
-                    <div className="relative p-5">
+                    <div className="relative p-4">
                         <button
                             onClick={() => setIsEditing(true)}
                             className="absolute right-3 top-3 rounded-full bg-white/20 p-1.5 transition hover:bg-white/30"
@@ -222,7 +222,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
             {me && myBudgetShare > 0 && (
                 <button type="button" onClick={() => onNavigate('mybalance')} className="w-full text-left">
                     <div className={cn(
-                        'overflow-hidden rounded-2xl p-5 text-white shadow-sm transition-opacity hover:opacity-95',
+                        'overflow-hidden rounded-2xl p-4 text-white shadow-sm transition-opacity hover:opacity-95',
                         allPaidUp
                             ? 'bg-gradient-to-br from-green-500 to-emerald-600'
                             : 'bg-gradient-to-br from-violet-600 to-purple-700',
@@ -240,11 +240,11 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                             <ArrowRight className="ml-auto size-4 shrink-0 text-white/60" />
                         </div>
                         {allPaidUp ? (
-                            <p className="mt-2 text-3xl font-bold">🎉 All settled!</p>
+                            <p className="mt-1.5 text-3xl font-bold">🎉 All settled!</p>
                         ) : (
-                            <p className="mt-2 text-4xl font-bold tabular-nums">{formatPeso(myStillNeeded)}</p>
+                            <p className="mt-1.5 text-4xl font-bold tabular-nums">{formatPeso(myStillNeeded)}</p>
                         )}
-                        <div className="mt-3 flex items-center gap-4 border-t border-white/20 pt-3 text-xs text-white/70">
+                        <div className="mt-2 flex items-center gap-4 border-t border-white/20 pt-2 text-xs text-white/70">
                             <span>Share: {formatPeso(myBudgetShare)}</span>
                             {myAdvancePaid > 0 && <span>Paid: {formatPeso(myAdvancePaid)}</span>}
                         </div>
@@ -256,8 +256,8 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
             {(totalBudget > 0 || totalSpend > 0) && (
                 <button type="button" onClick={() => onNavigate('budget')} className="w-full text-left">
                     <Card className="transition-colors hover:bg-muted/40">
-                        <CardContent className="p-4">
-                            <div className="mb-3 flex items-center gap-2">
+                        <CardContent className="p-3">
+                            <div className="mb-2 flex items-center gap-2">
                                 <Wallet className="size-4 text-muted-foreground" />
                                 <span className="text-sm font-semibold">Budget</span>
                                 <ArrowRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
