@@ -552,6 +552,7 @@ function BarkadaSharedApp() {
         if (resolvedId) localStorage.removeItem(`barkada-joined-${resolvedId}`);
         localStorage.removeItem(TRIP_ID_KEY);
         localStorage.removeItem(TRIP_CODE_KEY);
+        localStorage.removeItem('barkada-my-member-id');
         setTripId(null);
         setNewTripCode(null);
     };
