@@ -6,7 +6,7 @@ import { calculateSettlements, getSpendByCategory, getTotalBudget, getTotalSpend
 import { cn } from '@/lib/utils';
 import type { BarkadaStore, Member, Trip, View } from '@/types/barkada';
 import { calculateMemberBudgetShare, getActiveBudgetItems, getActiveExpenses, getAllCategories } from '@/types/barkada';
-import { ArrowRight, CalendarDays, HandCoins, MapPin, Pencil, Plus, ReceiptText, Users, Vault, Wallet } from 'lucide-react';
+import { ArrowRight, CalendarDays, HandCoins, MapPin, Pencil, Plus, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const MY_MEMBER_KEY = 'barkada-my-member-id';
@@ -196,18 +196,6 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
     const biggestSpender = Object.entries(spendByMember).sort(([, a], [, b]) => b - a)[0];
     const biggestSpenderMember = biggestSpender ? memberById[biggestSpender[0]] : null;
 
-    // Trip setup completion
-    const setupItems = [
-        { label: 'Trip name', done: !!trip.name },
-        { label: 'Destination', done: !!trip.destination },
-        { label: 'Dates', done: !!(trip.startDate && trip.endDate) },
-        { label: 'Members added', done: members.length > 0 },
-        { label: 'Budget planned', done: activeBudgetItems.length > 0 },
-    ];
-    const setupDone = setupItems.filter((i) => i.done).length;
-    const setupTotal = setupItems.length;
-    const setupComplete = setupDone === setupTotal;
-
     // Members who haven't paid any amount toward each collection
     const collectionMemberStatus = (collectionId: string, memberIds: string[], targetAmount: number) => {
         const sharePerPerson = memberIds.length > 0 ? targetAmount / memberIds.length : 0;
@@ -376,15 +364,13 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                                 <ArrowRight className="ml-auto size-4 shrink-0 text-white/60" />
                             </div>
                             {allPaidUp ? (
-                                <p className="mt-1.5 text-3xl font-bold">🎉 All settled!</p>
+                                <p className="mt-2 text-3xl font-bold">🎉 All settled!</p>
                             ) : (
-                                <p className="mt-1.5 text-4xl font-bold tabular-nums">{formatPeso(myStillNeeded)}</p>
+                                <p className="mt-2 text-4xl font-bold tabular-nums">{formatPeso(myStillNeeded)}</p>
                             )}
-                            <div className="mt-auto border-t border-white/20 pt-2 text-xs text-white/70">
-                                <div className="flex items-center gap-4 mt-2">
-                                    <span>Share: {formatPeso(myBudgetShare)}</span>
-                                    {myAdvancePaid > 0 && <span>Paid: {formatPeso(myAdvancePaid)}</span>}
-                                </div>
+                            <div className="mt-auto flex items-center gap-4 border-t border-white/20 pt-3 text-xs text-white/70">
+                                <span>Share: {formatPeso(myBudgetShare)}</span>
+                                {myAdvancePaid > 0 && <span>Paid: {formatPeso(myAdvancePaid)}</span>}
                             </div>
                         </div>
                     </button>
@@ -394,8 +380,8 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                 {(totalBudget > 0 || totalSpend > 0) && (
                     <button type="button" onClick={() => onNavigate('budget')} className="h-full w-full text-left">
                         <Card className="h-full transition-colors hover:bg-muted/40">
-                            <CardContent className="flex h-full flex-col p-3">
-                                <div className="mb-2 flex items-center gap-2">
+                            <CardContent className="flex h-full flex-col p-4">
+                                <div className="mb-3 flex items-center gap-2">
                                     <Wallet className="size-4 text-muted-foreground" />
                                     <span className="text-sm font-semibold">Budget</span>
                                     <ArrowRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
@@ -445,7 +431,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                 {/* Collections */}
                 {collections.length > 0 && (
                     <Card className="h-full">
-                        <CardHeader className="pb-2">
+                        <CardHeader className="px-4 pb-2 pt-4">
                             <div className="flex items-center justify-between">
                                 <CardTitle className="text-sm">Collections</CardTitle>
                                 <button type="button" onClick={() => onNavigate('collections')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
@@ -491,7 +477,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                 {/* Recent expenses */}
                 {recentExpenses.length > 0 && (
                     <Card className="h-full">
-                        <CardHeader className="pb-2">
+                        <CardHeader className="px-4 pb-2 pt-4">
                             <div className="flex items-center justify-between">
                                 <CardTitle className="text-sm">Recent Expenses</CardTitle>
                                 <button type="button" onClick={() => onNavigate('expenses')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
@@ -541,30 +527,6 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                             </CardContent>
                         </Card>
                     </button>
-                )}
-
-                {/* Trip setup — full width */}
-                {!setupComplete && (
-                    <Card className="border-dashed sm:col-span-2">
-                        <CardHeader className="pb-2">
-                            <div className="flex items-center gap-3">
-                                <ProgressRing value={setupDone} max={setupTotal} size={48} strokeWidth={5} colorClass="text-indigo-500" />
-                                <div>
-                                    <CardTitle className="text-sm">Trip Setup</CardTitle>
-                                    <p className="text-xs text-muted-foreground">{setupDone} of {setupTotal} complete</p>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="px-4 pb-3">
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                {setupItems.map(({ label, done }) => (
-                                    <p key={label} className={cn('text-xs', done ? 'text-muted-foreground line-through' : 'font-medium')}>
-                                        {done ? '✓' : '○'} {label}
-                                    </p>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
                 )}
 
             </div>
