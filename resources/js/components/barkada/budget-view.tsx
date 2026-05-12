@@ -1,14 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { AppModal } from '@/components/ui/app-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -101,23 +94,13 @@ function BudgetItemDialog({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{initial ? 'Edit Budget Item' : 'Add Budget Item'}</DialogTitle>
-                    <DialogDescription>Set a description, category, amount, and who this cost is split among.</DialogDescription>
-                </DialogHeader>
-
+        <AppModal open={open} onOpenChange={onOpenChange} title={initial ? 'Edit Budget Item' : 'Add Budget Item'}>
                 <div className="space-y-1.5">
                     <Label htmlFor="budget-name">Description</Label>
                     <Input
                         id="budget-name"
-                        autoFocus
                         value={name}
-                        onChange={(e) => {
-                            setName(e.target.value);
-                            setErrors((p) => ({ ...p, name: '' }));
-                        }}
+                        onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: '' })); }}
                         onKeyDown={(e) => e.key === 'Enter' && submit()}
                         placeholder="e.g. Room, Gas Car 1, Island Hopping"
                         aria-invalid={!!errors.name}
@@ -137,9 +120,7 @@ function BudgetItemDialog({
                                     onClick={() => setCategory(cat)}
                                     className={cn(
                                         'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                                        category === cat
-                                            ? 'border-indigo-600 bg-indigo-600 text-white'
-                                            : 'border-border bg-background hover:bg-muted',
+                                        category === cat ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-border bg-background hover:bg-muted',
                                     )}
                                 >
                                     <span>{meta.icon}</span>
@@ -158,10 +139,7 @@ function BudgetItemDialog({
                         min="0"
                         step="100"
                         value={amount}
-                        onChange={(e) => {
-                            setAmount(e.target.value);
-                            setErrors((p) => ({ ...p, amount: '' }));
-                        }}
+                        onChange={(e) => { setAmount(e.target.value); setErrors((p) => ({ ...p, amount: '' })); }}
                         onKeyDown={(e) => e.key === 'Enter' && submit()}
                         placeholder="0.00"
                         aria-invalid={!!errors.amount}
@@ -173,51 +151,23 @@ function BudgetItemDialog({
                     <div className="space-y-1.5">
                         <Label>Split among</Label>
                         <div className="flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setCarpoolId('')}
-                                className={cn(
-                                    'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                                    !carpoolId ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-border bg-background hover:bg-muted',
-                                )}
-                            >
+                            <button type="button" onClick={() => setCarpoolId('')} className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors', !carpoolId ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-border bg-background hover:bg-muted')}>
                                 👥 All Members
                             </button>
                             {store.carpools.map((carpool) => (
-                                <button
-                                    key={carpool.id}
-                                    type="button"
-                                    onClick={() => setCarpoolId(carpool.id)}
-                                    className={cn(
-                                        'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                                        carpoolId === carpool.id
-                                            ? 'border-indigo-600 bg-indigo-600 text-white'
-                                            : 'border-border bg-background hover:bg-muted',
-                                    )}
-                                >
-                                    🚗 {carpool.name}
-                                    <span className="opacity-70">({carpool.memberIds.length})</span>
+                                <button key={carpool.id} type="button" onClick={() => setCarpoolId(carpool.id)} className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors', carpoolId === carpool.id ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-border bg-background hover:bg-muted')}>
+                                    🚗 {carpool.name} <span className="opacity-70">({carpool.memberIds.length})</span>
                                 </button>
                             ))}
                         </div>
-                        {carpoolId && (
-                            <p className="text-xs text-muted-foreground">
-                                Split among {store.carpools.find(c => c.id === carpoolId)?.memberIds.length ?? 0} passengers only
-                            </p>
-                        )}
+                        {carpoolId && <p className="text-xs text-muted-foreground">Split among {store.carpools.find(c => c.id === carpoolId)?.memberIds.length ?? 0} passengers only</p>}
                     </div>
                 )}
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
-                    </Button>
-                    <Button onClick={submit} disabled={!name.trim()} className="bg-indigo-600 hover:bg-indigo-700">
-                        Save
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                <Button onClick={submit} disabled={!name.trim()} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                    Save
+                </Button>
+        </AppModal>
     );
 }
 

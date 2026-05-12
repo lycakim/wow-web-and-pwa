@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { AppModal } from '@/components/ui/app-modal';
 import { ConfirmDeleteDialog } from '@/components/barkada/confirm-delete-dialog';
 import { cn } from '@/lib/utils';
 import type { BarkadaStore, Collection, CollectionPayment, Member } from '@/types/barkada';
@@ -90,13 +90,8 @@ function AddCollectionSheet({
     };
 
     return (
-        <Sheet open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-            <SheetContent side="bottom" className="flex max-h-[92svh] flex-col rounded-t-2xl">
-                <SheetHeader className="shrink-0">
-                    <SheetTitle>New Collection</SheetTitle>
-                </SheetHeader>
-                <div className="flex-1 overflow-y-auto overscroll-contain">
-                <div className="space-y-5 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <AppModal open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }} title="New Collection">
+                <div>
                     <div className="space-y-1.5">
                         <Label>Name</Label>
                         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Room Downpayment, Van Deposit" aria-invalid={!!errors.name} />
@@ -149,9 +144,7 @@ function AddCollectionSheet({
 
                     <Button onClick={submit} className="w-full bg-indigo-600 hover:bg-indigo-700">Create Collection</Button>
                 </div>
-                </div>
-            </SheetContent>
-        </Sheet>
+        </AppModal>
     );
 }
 
@@ -195,14 +188,7 @@ function AddPaymentSheet({
     const payers = members.filter((m) => collection.memberIds.includes(m.id));
 
     return (
-        <Sheet open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-            <SheetContent side="bottom" className="flex max-h-[92svh] flex-col rounded-t-2xl">
-                <SheetHeader className="shrink-0">
-                    <SheetTitle>Record Payment</SheetTitle>
-                </SheetHeader>
-                <div className="flex-1 overflow-y-auto overscroll-contain">
-                <div className="space-y-5 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-
+        <AppModal open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }} title="Record Payment">
                     {/* Visual arrow preview */}
                     <div className="flex items-center justify-center gap-3 rounded-2xl bg-muted/50 px-4 py-4">
                         <div className="flex flex-col items-center gap-1">
@@ -253,10 +239,7 @@ function AddPaymentSheet({
                     </div>
 
                     <Button onClick={submit} className="w-full bg-indigo-600 hover:bg-indigo-700">Record Payment</Button>
-                </div>
-                </div>
-            </SheetContent>
-        </Sheet>
+        </AppModal>
     );
 }
 

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { AppModal } from '@/components/ui/app-modal';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import type { BarkadaStore, Carpool, Category, CategoryMeta, Expense, Member } from '@/types/barkada';
@@ -153,21 +153,15 @@ function ExpenseSheet({
     };
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="bottom" className="flex max-h-[92svh] flex-col rounded-t-2xl">
-                <SheetHeader className="shrink-0">
-                    <SheetTitle>Add Expense</SheetTitle>
-                </SheetHeader>
-
+        <AppModal open={open} onOpenChange={onOpenChange} title="Add Expense">
                 {members.length === 0 ? (
-                    <div className="flex flex-col items-center px-4 py-10 text-center">
+                    <div className="flex flex-col items-center py-10 text-center">
                         <p className="text-4xl">👥</p>
                         <p className="mt-2 font-semibold">Add members first</p>
                         <p className="mt-1 text-sm text-muted-foreground">You need at least one member before logging expenses.</p>
                     </div>
                 ) : (
-                    <div className="flex-1 overflow-y-auto overscroll-contain">
-                    <div className="space-y-5 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+                    <>
                         {/* Description */}
                         <div className="space-y-1.5">
                             <Label htmlFor="exp-desc">Description</Label>
@@ -340,11 +334,9 @@ function ExpenseSheet({
                         <Button onClick={submit} className="w-full bg-indigo-600 hover:bg-indigo-700">
                             Add Expense
                         </Button>
-                    </div>
-                    </div>
+                    </>
                 )}
-            </SheetContent>
-        </Sheet>
+        </AppModal>
     );
 }
 
