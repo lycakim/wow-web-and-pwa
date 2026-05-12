@@ -2,11 +2,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { calculateSettlements, getTotalBudget, getTotalSpend } from '@/hooks/use-barkada-store';
+import { calculateSettlements, getSpendByCategory, getTotalBudget, getTotalSpend } from '@/hooks/use-barkada-store';
 import { cn } from '@/lib/utils';
 import type { BarkadaStore, Member, Trip, View } from '@/types/barkada';
-import { calculateMemberBudgetShare, getActiveBudgetItems, getActiveExpenses } from '@/types/barkada';
-import { ArrowRight, CalendarDays, HandCoins, MapPin, Pencil, ReceiptText, Users, Vault, Wallet } from 'lucide-react';
+import { calculateMemberBudgetShare, getActiveBudgetItems, getActiveExpenses, getAllCategories } from '@/types/barkada';
+import { ArrowRight, CalendarDays, HandCoins, MapPin, Pencil, Plus, ReceiptText, Users, Vault, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const MY_MEMBER_KEY = 'barkada-my-member-id';
@@ -30,23 +30,68 @@ function formatPeso(amount: number): string {
     return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function getDaysToGo(startDate: string, endDate: string): { label: string; emoji: string } | null {
-    if (!startDate && !endDate) return null;
+function getDaysInfo(startDate: string, endDate: string): {
+    countdown: { label: string; emoji: string } | null;
+    dayProgress: { current: number; total: number } | null;
+} {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    if (startDate) {
+
+    let countdown: { label: string; emoji: string } | null = null;
+    let dayProgress: { current: number; total: number } | null = null;
+
+    if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+        const totalDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+
+        if (now < start) {
+            const diff = Math.round((start.getTime() - now.getTime()) / 86400000);
+            countdown = { label: `${diff} day${diff !== 1 ? 's' : ''} to go`, emoji: '🏖️' };
+        } else if (now <= end) {
+            const current = Math.round((now.getTime() - start.getTime()) / 86400000) + 1;
+            dayProgress = { current, total: totalDays };
+            countdown = { label: `Day ${current} of ${totalDays}`, emoji: '🤙' };
+        }
+    } else if (startDate) {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
-        const diff = Math.round((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        if (diff > 0) return { label: `${diff} day${diff !== 1 ? 's' : ''} to go`, emoji: '🏖️' };
-        if (diff === 0) return { label: "It's today!", emoji: '🎉' };
+        const diff = Math.round((start.getTime() - now.getTime()) / 86400000);
+        if (diff > 0) countdown = { label: `${diff} day${diff !== 1 ? 's' : ''} to go`, emoji: '🏖️' };
+        else if (diff === 0) countdown = { label: "It's today!", emoji: '🎉' };
     }
-    if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(0, 0, 0, 0);
-        if (end >= now) return { label: 'Trip is on!', emoji: '🤙' };
-    }
-    return null;
+
+    return { countdown, dayProgress };
+}
+
+// Circular SVG progress ring
+function ProgressRing({
+    value, max, size = 72, strokeWidth = 7, colorClass = 'text-indigo-500',
+}: {
+    value: number; max: number; size?: number; strokeWidth?: number; colorClass?: string;
+}) {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const pct = max > 0 ? Math.min(1, value / max) : 0;
+    const offset = circumference * (1 - pct);
+    const pctLabel = max > 0 ? Math.round(pct * 100) : 0;
+
+    return (
+        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+            <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={strokeWidth} className="stroke-muted" />
+                <circle
+                    cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={strokeWidth}
+                    strokeDasharray={circumference} strokeDashoffset={offset}
+                    strokeLinecap="round" className={cn('transition-all duration-700', colorClass)}
+                    style={{ stroke: 'currentColor' }}
+                />
+            </svg>
+            <span className="absolute text-xs font-bold tabular-nums">{pctLabel}%</span>
+        </div>
+    );
 }
 
 interface HomeViewProps {
@@ -59,7 +104,6 @@ function TripEditForm({ trip, onSave, onCancel }: { trip: Trip; onSave: (t: Trip
     const [form, setForm] = useState<Trip>(trip);
     const set = (key: keyof Trip) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setForm((p) => ({ ...p, [key]: e.target.value }));
-
     return (
         <Card>
             <CardHeader><CardTitle className="text-base">Edit Trip Details</CardTitle></CardHeader>
@@ -99,9 +143,11 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
     const isOverBudget = remaining < 0;
     const hasTrip = trip.name || trip.destination;
     const settlements = calculateSettlements(members, activeExpenses, collections, collectionPayments);
-    const countdown = getDaysToGo(trip.startDate, trip.endDate);
+    const allCategories = getAllCategories(store);
+    const spendByCategory = getSpendByCategory(activeExpenses);
+    const { countdown, dayProgress } = getDaysInfo(trip.startDate, trip.endDate);
 
-    // Active collections (not yet fully funded)
+    // Collections
     const activeCollections = collections.filter((c) => {
         const paid = collectionPayments.filter((p) => p.collectionId === c.id).reduce((s, p) => s + p.amount, 0);
         return paid < c.targetAmount;
@@ -126,28 +172,58 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
     const myBudgetShare = me
         ? calculateMemberBudgetShare(myMemberId, activeBudgetItems, carpools, members.length) + bufferContingencyShare
         : 0;
-    const myAdvancePaid = collectionPayments
-        .filter((p) => p.fromMemberId === myMemberId)
-        .reduce((s, p) => s + p.amount, 0);
+    const myAdvancePaid = collectionPayments.filter((p) => p.fromMemberId === myMemberId).reduce((s, p) => s + p.amount, 0);
     const myStillNeeded = Math.max(0, myBudgetShare - myAdvancePaid);
     const allPaidUp = myBudgetShare > 0 && myStillNeeded === 0;
 
     const memberById = Object.fromEntries(members.map((m) => [m.id, m]));
     const recentExpenses = activeExpenses.slice(0, 4);
     const budgetPct = totalBudget > 0 ? Math.min(100, (totalSpend / totalBudget) * 100) : 0;
+    const perPersonRemaining = members.length > 0 && remaining > 0 ? remaining / members.length : null;
+
+    // Top 3 categories by spend
+    const topCategories = Object.entries(spendByCategory)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([key, amount]) => ({ key, amount, meta: allCategories[key] }))
+        .filter(({ meta }) => !!meta);
+
+    // Biggest spender
+    const spendByMember: Record<string, number> = {};
+    for (const e of activeExpenses) {
+        spendByMember[e.paidById] = (spendByMember[e.paidById] ?? 0) + e.amount;
+    }
+    const biggestSpender = Object.entries(spendByMember).sort(([, a], [, b]) => b - a)[0];
+    const biggestSpenderMember = biggestSpender ? memberById[biggestSpender[0]] : null;
+
+    // Trip setup completion
+    const setupItems = [
+        { label: 'Trip name', done: !!trip.name },
+        { label: 'Destination', done: !!trip.destination },
+        { label: 'Dates', done: !!(trip.startDate && trip.endDate) },
+        { label: 'Members added', done: members.length > 0 },
+        { label: 'Budget planned', done: activeBudgetItems.length > 0 },
+    ];
+    const setupDone = setupItems.filter((i) => i.done).length;
+    const setupTotal = setupItems.length;
+    const setupComplete = setupDone === setupTotal;
+
+    // Members who haven't paid any amount toward each collection
+    const collectionMemberStatus = (collectionId: string, memberIds: string[], targetAmount: number) => {
+        const sharePerPerson = memberIds.length > 0 ? targetAmount / memberIds.length : 0;
+        return memberIds.filter((mid) => {
+            const paid = collectionPayments.filter((p) => p.collectionId === collectionId && p.fromMemberId === mid).reduce((s, p) => s + p.amount, 0);
+            return paid < sharePerPerson - 0.005;
+        });
+    };
 
     return (
         <div className="space-y-3 p-3">
-            {/* Trip hero + stat ribbon */}
+            {/* Trip hero */}
             {isEditing ? (
-                <TripEditForm
-                    trip={trip}
-                    onSave={(t) => { onUpdateTrip(t); setIsEditing(false); }}
-                    onCancel={() => setIsEditing(false)}
-                />
+                <TripEditForm trip={trip} onSave={(t) => { onUpdateTrip(t); setIsEditing(false); }} onCancel={() => setIsEditing(false)} />
             ) : (
                 <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-lg">
-                    {/* Main info */}
                     <div className="relative p-4">
                         <button
                             onClick={() => setIsEditing(true)}
@@ -156,11 +232,13 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                         >
                             <Pencil className="size-3.5" />
                         </button>
+
                         {hasTrip ? (
                             <>
                                 <p className="text-xs font-medium uppercase tracking-widest text-white/60">Barkada Trip</p>
-                                <h2 className="mt-1 text-2xl font-bold leading-tight">{trip.name || 'Unnamed Trip'}</h2>
-                                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <h2 className="mt-0.5 text-2xl font-bold leading-tight">{trip.name || 'Unnamed Trip'}</h2>
+
+                                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                                     {trip.destination && (
                                         <div className="flex items-center gap-1 text-sm text-white/80">
                                             <MapPin className="size-3.5" />
@@ -178,10 +256,51 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Day progress bar */}
+                                {dayProgress && (
+                                    <div className="mt-3">
+                                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                                            <div
+                                                className="h-full rounded-full bg-white/70 transition-all"
+                                                style={{ width: `${(dayProgress.current / dayProgress.total) * 100}%` }}
+                                            />
+                                        </div>
+                                        <p className="mt-1 text-[11px] text-white/60">Day {dayProgress.current} of {dayProgress.total}</p>
+                                    </div>
+                                )}
+
+                                {/* Countdown pill */}
                                 {countdown && (
-                                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+                                    <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
                                         <span>{countdown.emoji}</span>
                                         <span>{countdown.label}</span>
+                                    </div>
+                                )}
+
+                                {/* Member avatars */}
+                                {members.length > 0 && (
+                                    <div className="mt-3 flex items-center gap-1.5">
+                                        <div className="flex -space-x-2">
+                                            {members.slice(0, 6).map((m) => (
+                                                <span
+                                                    key={m.id}
+                                                    title={m.name}
+                                                    className={cn(
+                                                        'inline-flex size-7 items-center justify-center rounded-full border-2 border-indigo-600 text-[10px] font-bold text-white',
+                                                        avatarColor(members, m.id),
+                                                    )}
+                                                >
+                                                    {getInitials(m.name)}
+                                                </span>
+                                            ))}
+                                            {members.length > 6 && (
+                                                <span className="inline-flex size-7 items-center justify-center rounded-full border-2 border-indigo-600 bg-white/20 text-[10px] font-bold">
+                                                    +{members.length - 6}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-xs text-white/60">{members.length} member{members.length !== 1 ? 's' : ''}</span>
                                     </div>
                                 )}
                             </>
@@ -218,19 +337,33 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                 </div>
             )}
 
-            {/* My balance — hero card */}
+            {/* Quick actions */}
+            <div className="grid grid-cols-2 gap-2">
+                <button
+                    type="button"
+                    onClick={() => onNavigate('expenses')}
+                    className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
+                >
+                    <Plus className="size-4" /> Log Expense
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onNavigate('collections')}
+                    className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-violet-300 bg-violet-50 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-300 dark:hover:bg-violet-950/50"
+                >
+                    <Plus className="size-4" /> Record Payment
+                </button>
+            </div>
+
+            {/* My balance hero */}
             {me && myBudgetShare > 0 && (
                 <button type="button" onClick={() => onNavigate('mybalance')} className="w-full text-left">
                     <div className={cn(
                         'overflow-hidden rounded-2xl p-4 text-white shadow-sm transition-opacity hover:opacity-95',
-                        allPaidUp
-                            ? 'bg-gradient-to-br from-green-500 to-emerald-600'
-                            : 'bg-gradient-to-br from-violet-600 to-purple-700',
+                        allPaidUp ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-violet-600 to-purple-700',
                     )}>
                         <div className="flex items-center gap-2.5">
-                            <span className={cn(
-                                'inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold',
-                            )}>
+                            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
                                 {getInitials(me.name)}
                             </span>
                             <p className="text-sm text-white/80">
@@ -252,7 +385,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                 </button>
             )}
 
-            {/* Budget — remaining as hero */}
+            {/* Budget — ring + remaining + per-person + category pills */}
             {(totalBudget > 0 || totalSpend > 0) && (
                 <button type="button" onClick={() => onNavigate('budget')} className="w-full text-left">
                     <Card className="transition-colors hover:bg-muted/40">
@@ -262,37 +395,49 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                                 <span className="text-sm font-semibold">Budget</span>
                                 <ArrowRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
                             </div>
-                            {totalBudget > 0 ? (
-                                <>
-                                    <div className="flex items-end justify-between gap-4">
-                                        <div>
-                                            <p className="text-xs text-muted-foreground mb-0.5">
-                                                {isOverBudget ? 'Over budget' : 'Remaining'}
-                                            </p>
-                                            <p className={cn(
-                                                'text-3xl font-bold tabular-nums',
-                                                isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400',
-                                            )}>
+
+                            <div className="flex items-center gap-4">
+                                {/* Progress ring */}
+                                <ProgressRing
+                                    value={totalSpend}
+                                    max={totalBudget > 0 ? totalBudget : totalSpend}
+                                    colorClass={isOverBudget ? 'text-destructive' : 'text-indigo-500'}
+                                />
+
+                                <div className="flex-1">
+                                    {totalBudget > 0 ? (
+                                        <>
+                                            <p className="text-xs text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</p>
+                                            <p className={cn('text-2xl font-bold tabular-nums leading-tight', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
                                                 {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
                                             </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-xs text-muted-foreground mb-0.5">Spent</p>
-                                            <p className="text-lg font-semibold tabular-nums">{formatPeso(totalSpend)}</p>
-                                        </div>
-                                    </div>
-                                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
-                                        <div
-                                            className={cn('h-full rounded-full transition-all', isOverBudget ? 'bg-destructive' : 'bg-indigo-500')}
-                                            style={{ width: `${budgetPct}%` }}
-                                        />
-                                    </div>
-                                    <p className="mt-1.5 text-right text-xs text-muted-foreground">of {formatPeso(totalBudget)} budget</p>
-                                </>
-                            ) : (
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-0.5">Spent</p>
-                                    <p className="text-3xl font-bold tabular-nums">{formatPeso(totalSpend)}</p>
+                                            <p className="text-xs text-muted-foreground">of {formatPeso(totalBudget)} · spent {formatPeso(totalSpend)}</p>
+                                            {perPersonRemaining !== null && members.length > 1 && (
+                                                <p className="mt-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                                                    ≈ {formatPeso(perPersonRemaining)} each left
+                                                </p>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="text-xs text-muted-foreground">Spent</p>
+                                            <p className="text-2xl font-bold tabular-nums">{formatPeso(totalSpend)}</p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Top category pills */}
+                            {topCategories.length > 0 && (
+                                <div className="mt-3 flex flex-wrap gap-1.5">
+                                    {topCategories.map(({ key, amount, meta }) => (
+                                        <span
+                                            key={key}
+                                            className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium', meta.bgClass, meta.textClass)}
+                                        >
+                                            {meta.icon} {meta.shortLabel} · {formatPeso(amount)}
+                                        </span>
+                                    ))}
                                 </div>
                             )}
                         </CardContent>
@@ -318,11 +463,12 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                     </CardHeader>
                     <CardContent className="space-y-3 px-4 pb-4">
                         {collections.map((col) => {
-                            const paid = collectionPayments
-                                .filter((p) => p.collectionId === col.id)
-                                .reduce((s, p) => s + p.amount, 0);
+                            const paid = collectionPayments.filter((p) => p.collectionId === col.id).reduce((s, p) => s + p.amount, 0);
                             const pct = col.targetAmount > 0 ? Math.min(100, (paid / col.targetAmount) * 100) : 0;
                             const done = paid >= col.targetAmount;
+                            const unpaidMemberIds = collectionMemberStatus(col.id, col.memberIds, col.targetAmount);
+                            const unpaidNames = unpaidMemberIds.map((id) => memberById[id]?.name).filter(Boolean);
+
                             return (
                                 <div key={col.id}>
                                     <div className="mb-1 flex items-center justify-between text-xs">
@@ -337,6 +483,11 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                                             style={{ width: `${pct}%` }}
                                         />
                                     </div>
+                                    {!done && unpaidNames.length > 0 && (
+                                        <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                                            ⚠️ {unpaidNames.length === 1 ? unpaidNames[0] : `${unpaidNames.slice(0, 2).join(', ')}${unpaidNames.length > 2 ? ` +${unpaidNames.length - 2}` : ''}`} haven't paid yet
+                                        </p>
+                                    )}
                                 </div>
                             );
                         })}
@@ -344,7 +495,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                 </Card>
             )}
 
-            {/* Recent expenses */}
+            {/* Recent expenses + biggest spender */}
             {recentExpenses.length > 0 && (
                 <Card>
                     <CardHeader className="pb-2">
@@ -354,6 +505,11 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                                 View all
                             </button>
                         </div>
+                        {biggestSpenderMember && activeExpenses.length > 1 && (
+                            <p className="text-xs text-muted-foreground">
+                                🏆 <span className="font-medium text-foreground">{biggestSpenderMember.name}</span> paid the most — {formatPeso(biggestSpender![1])}
+                            </p>
+                        )}
                     </CardHeader>
                     <CardContent className="px-0 pb-2">
                         <div className="divide-y">
@@ -364,7 +520,7 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                                         <div className="min-w-0 flex-1">
                                             <p className="truncate text-sm font-medium">{e.description}</p>
                                             <p className="text-xs text-muted-foreground">
-                                                paid by {paidBy?.name ?? '?'} · {new Date(e.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+                                                {paidBy?.name ?? '?'} · {new Date(e.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
                                             </p>
                                         </div>
                                         <p className="text-sm font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{formatPeso(e.amount)}</p>
@@ -392,6 +548,30 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                         </CardContent>
                     </Card>
                 </button>
+            )}
+
+            {/* Trip setup completion */}
+            {!setupComplete && (
+                <Card className="border-dashed">
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center gap-3">
+                            <ProgressRing value={setupDone} max={setupTotal} size={48} strokeWidth={5} colorClass="text-indigo-500" />
+                            <div>
+                                <CardTitle className="text-sm">Trip Setup</CardTitle>
+                                <p className="text-xs text-muted-foreground">{setupDone} of {setupTotal} complete</p>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-3">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                            {setupItems.map(({ label, done }) => (
+                                <p key={label} className={cn('text-xs', done ? 'text-muted-foreground line-through' : 'font-medium')}>
+                                    {done ? '✓' : '○'} {label}
+                                </p>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
             )}
         </div>
     );
