@@ -355,224 +355,219 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                 </button>
             </div>
 
-            {/* My balance hero */}
-            {me && myBudgetShare > 0 && (
-                <button type="button" onClick={() => onNavigate('mybalance')} className="w-full text-left">
-                    <div className={cn(
-                        'overflow-hidden rounded-2xl p-4 text-white shadow-sm transition-opacity hover:opacity-95',
-                        allPaidUp ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-violet-600 to-purple-700',
-                    )}>
-                        <div className="flex items-center gap-2.5">
-                            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
-                                {getInitials(me.name)}
-                            </span>
-                            <p className="text-sm text-white/80">
-                                Hi, {me.name.split(' ')[0]}!{' '}
-                                {allPaidUp ? "You're all paid up" : 'You still need to bring'}
-                            </p>
-                            <ArrowRight className="ml-auto size-4 shrink-0 text-white/60" />
-                        </div>
-                        {allPaidUp ? (
-                            <p className="mt-1.5 text-3xl font-bold">🎉 All settled!</p>
-                        ) : (
-                            <p className="mt-1.5 text-4xl font-bold tabular-nums">{formatPeso(myStillNeeded)}</p>
-                        )}
-                        <div className="mt-2 flex items-center gap-4 border-t border-white/20 pt-2 text-xs text-white/70">
-                            <span>Share: {formatPeso(myBudgetShare)}</span>
-                            {myAdvancePaid > 0 && <span>Paid: {formatPeso(myAdvancePaid)}</span>}
-                        </div>
-                    </div>
-                </button>
-            )}
+            {/* 2-column grid on desktop */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
-            {/* Budget — ring + remaining + per-person + category pills */}
-            {(totalBudget > 0 || totalSpend > 0) && (
-                <button type="button" onClick={() => onNavigate('budget')} className="w-full text-left">
-                    <Card className="transition-colors hover:bg-muted/40">
-                        <CardContent className="p-3">
-                            <div className="mb-2 flex items-center gap-2">
-                                <Wallet className="size-4 text-muted-foreground" />
-                                <span className="text-sm font-semibold">Budget</span>
-                                <ArrowRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
+                {/* My balance hero */}
+                {me && myBudgetShare > 0 && (
+                    <button type="button" onClick={() => onNavigate('mybalance')} className="h-full w-full text-left">
+                        <div className={cn(
+                            'flex h-full flex-col overflow-hidden rounded-2xl p-4 text-white shadow-sm transition-opacity hover:opacity-95',
+                            allPaidUp ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-violet-600 to-purple-700',
+                        )}>
+                            <div className="flex items-center gap-2.5">
+                                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
+                                    {getInitials(me.name)}
+                                </span>
+                                <p className="text-sm text-white/80">
+                                    Hi, {me.name.split(' ')[0]}!{' '}
+                                    {allPaidUp ? "You're all paid up" : 'You still need to bring'}
+                                </p>
+                                <ArrowRight className="ml-auto size-4 shrink-0 text-white/60" />
                             </div>
-
-                            <div className="flex items-center gap-4">
-                                {/* Progress ring */}
-                                <ProgressRing
-                                    value={totalSpend}
-                                    max={totalBudget > 0 ? totalBudget : totalSpend}
-                                    colorClass={isOverBudget ? 'text-destructive' : 'text-indigo-500'}
-                                />
-
-                                <div className="flex-1">
-                                    {totalBudget > 0 ? (
-                                        <>
-                                            <p className="text-xs text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</p>
-                                            <p className={cn('text-2xl font-bold tabular-nums leading-tight', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
-                                                {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">of {formatPeso(totalBudget)} · spent {formatPeso(totalSpend)}</p>
-                                            {perPersonRemaining !== null && members.length > 1 && (
-                                                <p className="mt-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                                                    ≈ {formatPeso(perPersonRemaining)} each left
-                                                </p>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <p className="text-xs text-muted-foreground">Spent</p>
-                                            <p className="text-2xl font-bold tabular-nums">{formatPeso(totalSpend)}</p>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Top category pills */}
-                            {topCategories.length > 0 && (
-                                <div className="mt-3 flex flex-wrap gap-1.5">
-                                    {topCategories.map(({ key, amount, meta }) => (
-                                        <span
-                                            key={key}
-                                            className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium', meta.bgClass, meta.textClass)}
-                                        >
-                                            {meta.icon} {meta.shortLabel} · {formatPeso(amount)}
-                                        </span>
-                                    ))}
-                                </div>
+                            {allPaidUp ? (
+                                <p className="mt-1.5 text-3xl font-bold">🎉 All settled!</p>
+                            ) : (
+                                <p className="mt-1.5 text-4xl font-bold tabular-nums">{formatPeso(myStillNeeded)}</p>
                             )}
-                        </CardContent>
-                    </Card>
-                </button>
-            )}
-
-            {/* Collections */}
-            {collections.length > 0 && (
-                <Card>
-                    <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm">Collections</CardTitle>
-                            <button type="button" onClick={() => onNavigate('collections')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
-                                View all
-                            </button>
-                        </div>
-                        {totalCollectionTarget > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                                {formatPeso(totalCollected)} of {formatPeso(totalCollectionTarget)} collected
-                            </p>
-                        )}
-                    </CardHeader>
-                    <CardContent className="space-y-3 px-4 pb-4">
-                        {collections.map((col) => {
-                            const paid = collectionPayments.filter((p) => p.collectionId === col.id).reduce((s, p) => s + p.amount, 0);
-                            const pct = col.targetAmount > 0 ? Math.min(100, (paid / col.targetAmount) * 100) : 0;
-                            const done = paid >= col.targetAmount;
-                            const unpaidMemberIds = collectionMemberStatus(col.id, col.memberIds, col.targetAmount);
-                            const unpaidNames = unpaidMemberIds.map((id) => memberById[id]?.name).filter(Boolean);
-
-                            return (
-                                <div key={col.id}>
-                                    <div className="mb-1 flex items-center justify-between text-xs">
-                                        <span className="font-medium">{col.name}</span>
-                                        <span className={cn('tabular-nums', done ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground')}>
-                                            {formatPeso(paid)} / {formatPeso(col.targetAmount)}
-                                        </span>
-                                    </div>
-                                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                                        <div
-                                            className={cn('h-full rounded-full transition-all', done ? 'bg-green-500' : 'bg-indigo-500')}
-                                            style={{ width: `${pct}%` }}
-                                        />
-                                    </div>
-                                    {!done && unpaidNames.length > 0 && (
-                                        <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
-                                            ⚠️ {unpaidNames.length === 1 ? unpaidNames[0] : `${unpaidNames.slice(0, 2).join(', ')}${unpaidNames.length > 2 ? ` +${unpaidNames.length - 2}` : ''}`} haven't paid yet
-                                        </p>
-                                    )}
+                            <div className="mt-auto border-t border-white/20 pt-2 text-xs text-white/70">
+                                <div className="flex items-center gap-4 mt-2">
+                                    <span>Share: {formatPeso(myBudgetShare)}</span>
+                                    {myAdvancePaid > 0 && <span>Paid: {formatPeso(myAdvancePaid)}</span>}
                                 </div>
-                            );
-                        })}
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Recent expenses + biggest spender */}
-            {recentExpenses.length > 0 && (
-                <Card>
-                    <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm">Recent Expenses</CardTitle>
-                            <button type="button" onClick={() => onNavigate('expenses')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
-                                View all
-                            </button>
+                            </div>
                         </div>
-                        {biggestSpenderMember && activeExpenses.length > 1 && (
-                            <p className="text-xs text-muted-foreground">
-                                🏆 <span className="font-medium text-foreground">{biggestSpenderMember.name}</span> paid the most — {formatPeso(biggestSpender![1])}
-                            </p>
-                        )}
-                    </CardHeader>
-                    <CardContent className="px-0 pb-2">
-                        <div className="divide-y">
-                            {recentExpenses.map((e) => {
-                                const paidBy = memberById[e.paidById];
+                    </button>
+                )}
+
+                {/* Budget */}
+                {(totalBudget > 0 || totalSpend > 0) && (
+                    <button type="button" onClick={() => onNavigate('budget')} className="h-full w-full text-left">
+                        <Card className="h-full transition-colors hover:bg-muted/40">
+                            <CardContent className="flex h-full flex-col p-3">
+                                <div className="mb-2 flex items-center gap-2">
+                                    <Wallet className="size-4 text-muted-foreground" />
+                                    <span className="text-sm font-semibold">Budget</span>
+                                    <ArrowRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <ProgressRing
+                                        value={totalSpend}
+                                        max={totalBudget > 0 ? totalBudget : totalSpend}
+                                        colorClass={isOverBudget ? 'text-destructive' : 'text-indigo-500'}
+                                    />
+                                    <div className="flex-1">
+                                        {totalBudget > 0 ? (
+                                            <>
+                                                <p className="text-xs text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</p>
+                                                <p className={cn('text-2xl font-bold tabular-nums leading-tight', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+                                                    {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">of {formatPeso(totalBudget)} · spent {formatPeso(totalSpend)}</p>
+                                                {perPersonRemaining !== null && members.length > 1 && (
+                                                    <p className="mt-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                                                        ≈ {formatPeso(perPersonRemaining)} each left
+                                                    </p>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className="text-xs text-muted-foreground">Spent</p>
+                                                <p className="text-2xl font-bold tabular-nums">{formatPeso(totalSpend)}</p>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                                {topCategories.length > 0 && (
+                                    <div className="mt-auto pt-3 flex flex-wrap gap-1.5">
+                                        {topCategories.map(({ key, amount, meta }) => (
+                                            <span key={key} className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium', meta.bgClass, meta.textClass)}>
+                                                {meta.icon} {meta.shortLabel} · {formatPeso(amount)}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </button>
+                )}
+
+                {/* Collections */}
+                {collections.length > 0 && (
+                    <Card className="h-full">
+                        <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm">Collections</CardTitle>
+                                <button type="button" onClick={() => onNavigate('collections')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                                    View all
+                                </button>
+                            </div>
+                            {totalCollectionTarget > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                    {formatPeso(totalCollected)} of {formatPeso(totalCollectionTarget)} collected
+                                </p>
+                            )}
+                        </CardHeader>
+                        <CardContent className="space-y-3 px-4 pb-4">
+                            {collections.map((col) => {
+                                const paid = collectionPayments.filter((p) => p.collectionId === col.id).reduce((s, p) => s + p.amount, 0);
+                                const pct = col.targetAmount > 0 ? Math.min(100, (paid / col.targetAmount) * 100) : 0;
+                                const done = paid >= col.targetAmount;
+                                const unpaidMemberIds = collectionMemberStatus(col.id, col.memberIds, col.targetAmount);
+                                const unpaidNames = unpaidMemberIds.map((id) => memberById[id]?.name).filter(Boolean);
                                 return (
-                                    <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate text-sm font-medium">{e.description}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {paidBy?.name ?? '?'} · {new Date(e.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
-                                            </p>
+                                    <div key={col.id}>
+                                        <div className="mb-1 flex items-center justify-between text-xs">
+                                            <span className="font-medium">{col.name}</span>
+                                            <span className={cn('tabular-nums', done ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground')}>
+                                                {formatPeso(paid)} / {formatPeso(col.targetAmount)}
+                                            </span>
                                         </div>
-                                        <p className="text-sm font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{formatPeso(e.amount)}</p>
+                                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                            <div className={cn('h-full rounded-full transition-all', done ? 'bg-green-500' : 'bg-indigo-500')} style={{ width: `${pct}%` }} />
+                                        </div>
+                                        {!done && unpaidNames.length > 0 && (
+                                            <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                                                ⚠️ {unpaidNames.length === 1 ? unpaidNames[0] : `${unpaidNames.slice(0, 2).join(', ')}${unpaidNames.length > 2 ? ` +${unpaidNames.length - 2}` : ''}`} haven't paid yet
+                                            </p>
+                                        )}
                                     </div>
                                 );
                             })}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Settlement nudge */}
-            {settlements.length > 0 && (
-                <button type="button" onClick={() => onNavigate('settlement')} className="w-full text-left">
-                    <Card className="border-orange-200 bg-orange-50 transition-colors hover:bg-orange-100 dark:border-orange-900/40 dark:bg-orange-950/20 dark:hover:bg-orange-950/30">
-                        <CardContent className="flex items-center gap-3 p-4">
-                            <HandCoins className="size-5 shrink-0 text-orange-600 dark:text-orange-400" />
-                            <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">
-                                    {settlements.length} payment{settlements.length !== 1 ? 's' : ''} needed
-                                </p>
-                                <p className="text-xs text-orange-600 dark:text-orange-400">Tap to see who owes whom</p>
-                            </div>
-                            <ArrowRight className="size-4 shrink-0 text-orange-500" />
                         </CardContent>
                     </Card>
-                </button>
-            )}
+                )}
 
-            {/* Trip setup completion */}
-            {!setupComplete && (
-                <Card className="border-dashed">
-                    <CardHeader className="pb-2">
-                        <div className="flex items-center gap-3">
-                            <ProgressRing value={setupDone} max={setupTotal} size={48} strokeWidth={5} colorClass="text-indigo-500" />
-                            <div>
-                                <CardTitle className="text-sm">Trip Setup</CardTitle>
-                                <p className="text-xs text-muted-foreground">{setupDone} of {setupTotal} complete</p>
+                {/* Recent expenses */}
+                {recentExpenses.length > 0 && (
+                    <Card className="h-full">
+                        <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm">Recent Expenses</CardTitle>
+                                <button type="button" onClick={() => onNavigate('expenses')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                                    View all
+                                </button>
                             </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-3">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                            {setupItems.map(({ label, done }) => (
-                                <p key={label} className={cn('text-xs', done ? 'text-muted-foreground line-through' : 'font-medium')}>
-                                    {done ? '✓' : '○'} {label}
+                            {biggestSpenderMember && activeExpenses.length > 1 && (
+                                <p className="text-xs text-muted-foreground">
+                                    🏆 <span className="font-medium text-foreground">{biggestSpenderMember.name}</span> paid the most — {formatPeso(biggestSpender![1])}
                                 </p>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                            )}
+                        </CardHeader>
+                        <CardContent className="px-0 pb-2">
+                            <div className="divide-y">
+                                {recentExpenses.map((e) => {
+                                    const paidBy = memberById[e.paidById];
+                                    return (
+                                        <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-medium">{e.description}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {paidBy?.name ?? '?'} · {new Date(e.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+                                                </p>
+                                            </div>
+                                            <p className="text-sm font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{formatPeso(e.amount)}</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Settlement nudge — full width */}
+                {settlements.length > 0 && (
+                    <button type="button" onClick={() => onNavigate('settlement')} className="w-full text-left sm:col-span-2">
+                        <Card className="border-orange-200 bg-orange-50 transition-colors hover:bg-orange-100 dark:border-orange-900/40 dark:bg-orange-950/20 dark:hover:bg-orange-950/30">
+                            <CardContent className="flex items-center gap-3 p-4">
+                                <HandCoins className="size-5 shrink-0 text-orange-600 dark:text-orange-400" />
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">
+                                        {settlements.length} payment{settlements.length !== 1 ? 's' : ''} needed
+                                    </p>
+                                    <p className="text-xs text-orange-600 dark:text-orange-400">Tap to see who owes whom</p>
+                                </div>
+                                <ArrowRight className="size-4 shrink-0 text-orange-500" />
+                            </CardContent>
+                        </Card>
+                    </button>
+                )}
+
+                {/* Trip setup — full width */}
+                {!setupComplete && (
+                    <Card className="border-dashed sm:col-span-2">
+                        <CardHeader className="pb-2">
+                            <div className="flex items-center gap-3">
+                                <ProgressRing value={setupDone} max={setupTotal} size={48} strokeWidth={5} colorClass="text-indigo-500" />
+                                <div>
+                                    <CardTitle className="text-sm">Trip Setup</CardTitle>
+                                    <p className="text-xs text-muted-foreground">{setupDone} of {setupTotal} complete</p>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="px-4 pb-3">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                {setupItems.map(({ label, done }) => (
+                                    <p key={label} className={cn('text-xs', done ? 'text-muted-foreground line-through' : 'font-medium')}>
+                                        {done ? '✓' : '○'} {label}
+                                    </p>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+            </div>
         </div>
     );
 }
