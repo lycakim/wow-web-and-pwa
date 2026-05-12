@@ -13,6 +13,7 @@ if ('serviceWorker' in navigator) {
 
 import { BudgetView } from '@/components/barkada/budget-view';
 import { CollectionsView } from '@/components/barkada/collections-view';
+import { MyBalanceView } from '@/components/barkada/my-balance-view';
 import { GroceryView } from '@/components/barkada/grocery-view';
 import { CarpoolsView } from '@/components/barkada/carpools-view';
 import { CategoriesView } from '@/components/barkada/categories-view';
@@ -62,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
     { view: 'carpools', label: 'Carpools', icon: Car },
     { view: 'grocery', label: 'Grocery', icon: ShoppingCart },
     { view: 'collections', label: 'Collections', icon: Vault },
+    { view: 'mybalance', label: 'My Balance', icon: ArrowLeftRight },
 ];
 
 const VIEW_LABELS: Record<View, string> = {
@@ -74,6 +76,7 @@ const VIEW_LABELS: Record<View, string> = {
     carpools: 'Carpools',
     grocery: 'Grocery',
     collections: 'Collections',
+    mybalance: 'My Balance',
 };
 
 function useDarkMode() {
@@ -467,6 +470,9 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                                     onAddPayment={addCollectionPayment}
                                     onRemovePayment={removeCollectionPayment}
                                 />
+                            )}
+                            {view === 'mybalance' && (
+                                <MyBalanceView store={store} />
                             )}
                         </>
                     )}

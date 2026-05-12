@@ -1,6 +1,6 @@
 export type Category = string;
 
-export type View = 'home' | 'members' | 'budget' | 'expenses' | 'settlement' | 'categories' | 'carpools' | 'grocery' | 'collections';
+export type View = 'home' | 'members' | 'budget' | 'expenses' | 'settlement' | 'categories' | 'carpools' | 'grocery' | 'collections' | 'mybalance';
 
 export interface Member {
     id: string;
