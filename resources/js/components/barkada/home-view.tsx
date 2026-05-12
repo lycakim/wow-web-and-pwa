@@ -7,6 +7,28 @@ import type { BarkadaStore, Member, Trip, View } from '@/types/barkada';
 import { calculateMemberBudgetShare, getActiveBudgetItems, getActiveExpenses, getAllCategories } from '@/types/barkada';
 import { CalendarDays, HandCoins, MapPin, Pencil, Plus, ReceiptText, Users, Vault } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
+
+const PROGRESS_COLOR_HEX: Record<string, string> = {
+    'bg-blue-500': '#3b82f6',
+    'bg-purple-500': '#a855f7',
+    'bg-orange-500': '#f97316',
+    'bg-green-500': '#22c55e',
+    'bg-pink-500': '#ec4899',
+    'bg-cyan-500': '#06b6d4',
+    'bg-yellow-500': '#eab308',
+    'bg-red-500': '#ef4444',
+    'bg-lime-500': '#84cc16',
+    'bg-amber-500': '#f59e0b',
+    'bg-teal-500': '#14b8a6',
+    'bg-violet-500': '#8b5cf6',
+    'bg-rose-500': '#f43f5e',
+    'bg-indigo-500': '#6366f1',
+};
+
+function progressColorToHex(cls: string): string {
+    return PROGRESS_COLOR_HEX[cls] ?? '#6366f1';
+}
 
 const MY_MEMBER_KEY = 'barkada-my-member-id';
 
@@ -150,12 +172,14 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
     const perPersonRemaining = members.length > 0 && remaining > 0 ? remaining / members.length : null;
 
     // Bar chart data
-    const chartCategories = Object.entries(spendByCategory)
+    const chartData = Object.entries(spendByCategory)
         .sort(([, a], [, b]) => b - a)
-        .slice(0, 5)
-        .map(([key, amount]) => ({ key, amount, meta: allCategories[key] }))
-        .filter(({ meta }) => !!meta);
-    const maxCategorySpend = Math.max(...chartCategories.map((c) => c.amount), 1);
+        .slice(0, 6)
+        .map(([key, amount]) => {
+            const meta = allCategories[key];
+            return meta ? { name: meta.shortLabel, amount, color: progressColorToHex(meta.progressColorClass), icon: meta.icon } : null;
+        })
+        .filter(Boolean) as { name: string; amount: number; color: string; icon: string }[];
 
     // Member balance summaries
     const memberBalanceSummaries = members.map((m) => {
@@ -324,27 +348,42 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                     )}
 
                     {/* ── Expense Distribution + Collections ── */}
-                    {(chartCategories.length > 0 || collections.length > 0) && (
+                    {(chartData.length > 0 || collections.length > 0) && (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            {chartCategories.length > 0 && (
+                            {chartData.length > 0 && (
                                 <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
                                         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Expense Distribution</p>
-                                        <p className="mb-4 text-[11px] text-muted-foreground">Breakdown by category</p>
-                                        <div className="flex h-36 items-end gap-2">
-                                            {chartCategories.map(({ key, amount, meta }) => (
-                                                <div key={key} className="flex flex-1 flex-col items-center gap-1">
-                                                    <span className="text-[10px] tabular-nums text-muted-foreground leading-none">
-                                                        {formatPeso(amount)}
-                                                    </span>
-                                                    <div
-                                                        className={cn('w-full rounded-t-md', meta.progressColorClass)}
-                                                        style={{ height: `${(amount / maxCategorySpend) * 100}%`, minHeight: '6px' }}
-                                                    />
-                                                    <span className="w-full truncate text-center text-[10px] text-muted-foreground">{meta.shortLabel}</span>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <p className="mb-3 text-[11px] text-muted-foreground">Breakdown by category</p>
+                                        <ResponsiveContainer width="100%" height={160}>
+                                            <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barCategoryGap="28%">
+                                                <XAxis
+                                                    dataKey="name"
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    tick={{ fontSize: 10, fill: 'currentColor' }}
+                                                    className="text-muted-foreground"
+                                                />
+                                                <Tooltip
+                                                    cursor={{ fill: 'transparent' }}
+                                                    content={({ active, payload }) => {
+                                                        if (!active || !payload?.length) return null;
+                                                        const d = payload[0].payload as { name: string; amount: number; icon: string };
+                                                        return (
+                                                            <div className="rounded-lg border bg-card px-3 py-2 text-xs shadow-md">
+                                                                <p className="font-semibold">{d.icon} {d.name}</p>
+                                                                <p className="tabular-nums text-muted-foreground">{formatPeso(d.amount)}</p>
+                                                            </div>
+                                                        );
+                                                    }}
+                                                />
+                                                <Bar dataKey="amount" radius={[5, 5, 0, 0]}>
+                                                    {chartData.map((entry, i) => (
+                                                        <Cell key={i} fill={entry.color} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
                                     </CardContent>
                                 </Card>
                             )}
