@@ -135,6 +135,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
     const [removedFromTrip, setRemovedFromTrip] = useState(false);
     const [confirmLeave, setConfirmLeave] = useState(false);
     const [confirmSwitch, setConfirmSwitch] = useState(false);
+    const [leaveCountdown, setLeaveCountdown] = useState(3);
     const { dark, toggle: toggleDark } = useDarkMode();
     const { name: currentUserName, saveName, isSet: nameIsSet } = useCurrentUser();
 
@@ -201,6 +202,23 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
         if (!stillExists) setRemovedFromTrip(true);
     }, [isHydrated, store.members, tripId]);
 
+    // Auto-redirect with countdown when removed from trip
+    useEffect(() => {
+        if (!removedFromTrip) return;
+        setLeaveCountdown(3);
+        const interval = setInterval(() => {
+            setLeaveCountdown((prev) => {
+                if (prev <= 1) {
+                    clearInterval(interval);
+                    onLeave(tripId);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [removedFromTrip]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Read the saved trip code from localStorage if not passed directly
     const [displayCode, setDisplayCode] = useState(() => tripCode ?? localStorage.getItem(TRIP_CODE_KEY) ?? '');
     const [regenerating, setRegenerating] = useState(false);
@@ -230,16 +248,16 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
                 <div className="mx-4 max-w-sm rounded-xl border bg-card p-6 text-center shadow-lg">
                     <p className="text-2xl">👋</p>
-                    <h2 className="mt-2 text-base font-semibold">You've been removed</h2>
+                    <h2 className="mt-2 text-base font-semibold">You've left the trip</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        You're no longer a member of this trip.
+                        Your member was removed. Redirecting in {leaveCountdown}…
                     </p>
                     <button
                         type="button"
                         onClick={() => onLeave(tripId)}
                         className="mt-4 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
                     >
-                        Back to Home
+                        Leave now
                     </button>
                 </div>
             </div>
