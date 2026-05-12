@@ -91,9 +91,9 @@ function MemberAvatar({ name, members, id, size = 'md' }: { name: string; member
 }
 
 export function SettlementView({ store }: SettlementViewProps) {
-    const { members } = store;
+    const { members, collections, collectionPayments } = store;
     const activeExpenses = getActiveExpenses(store);
-    const settlements = calculateSettlements(members, activeExpenses);
+    const settlements = calculateSettlements(members, activeExpenses, collections, collectionPayments);
     const totalSpend = getTotalSpend(activeExpenses);
     const spendByCategory = getSpendByCategory(activeExpenses);
     const allCategories = getAllCategories(store);
@@ -103,6 +103,14 @@ export function SettlementView({ store }: SettlementViewProps) {
     for (const expense of activeExpenses) {
         if (paidByMember[expense.paidById] !== undefined) {
             paidByMember[expense.paidById] += expense.amount;
+        }
+    }
+
+    // Collection payments already paid by each member (credits toward their share)
+    const collectionPaidByMember: Record<string, number> = Object.fromEntries(members.map((m) => [m.id, 0]));
+    for (const payment of collectionPayments) {
+        if (collectionPaidByMember[payment.fromMemberId] !== undefined) {
+            collectionPaidByMember[payment.fromMemberId] += payment.amount;
         }
     }
 
@@ -224,14 +232,18 @@ export function SettlementView({ store }: SettlementViewProps) {
             <Card>
                 <CardHeader>
                     <CardTitle>Balance per Member</CardTitle>
-                    <p className="text-sm text-muted-foreground">Fair share: {formatPeso(sharePerPerson)} each</p>
+                    <p className="text-sm text-muted-foreground">
+                        Fair share: {formatPeso(sharePerPerson)} each
+                        {collectionPayments.length > 0 && ' · collections included'}
+                    </p>
                 </CardHeader>
                 <CardContent className="px-0 pb-2">
                     {/* Mobile list */}
                     <div className="divide-y sm:hidden">
                         {members.map((m) => {
                             const paid = paidByMember[m.id] ?? 0;
-                            const net = paid - sharePerPerson;
+                            const collectionPaid = collectionPaidByMember[m.id] ?? 0;
+                            const net = paid + collectionPaid - sharePerPerson;
                             const isOwed = net > 0.005;
                             const owes = net < -0.005;
                             return (
@@ -239,7 +251,10 @@ export function SettlementView({ store }: SettlementViewProps) {
                                     <MemberAvatar name={m.name} members={members} id={m.id} />
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate text-sm font-medium">{m.name}</p>
-                                        <p className="text-xs text-muted-foreground">Paid {formatPeso(paid)}</p>
+                                        <p className="text-xs text-muted-foreground">Expenses paid {formatPeso(paid)}</p>
+                                        {collectionPaid > 0 && (
+                                            <p className="text-xs text-indigo-600 dark:text-indigo-400">+ Collections {formatPeso(collectionPaid)}</p>
+                                        )}
                                     </div>
                                     <div className="text-right">
                                         <p className={cn('text-sm font-bold tabular-nums', isOwed ? 'text-green-600 dark:text-green-400' : owes ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground')}>
@@ -258,14 +273,16 @@ export function SettlementView({ store }: SettlementViewProps) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="pl-6">Member</TableHead>
-                                <TableHead className="text-right">Paid</TableHead>
+                                <TableHead className="text-right">Expenses Paid</TableHead>
+                                <TableHead className="text-right">Collections</TableHead>
                                 <TableHead className="pr-6 text-right">Net</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {members.map((m) => {
                                 const paid = paidByMember[m.id] ?? 0;
-                                const net = paid - sharePerPerson;
+                                const collectionPaid = collectionPaidByMember[m.id] ?? 0;
+                                const net = paid + collectionPaid - sharePerPerson;
                                 const isOwed = net > 0.005;
                                 const owes = net < -0.005;
                                 return (
@@ -277,6 +294,9 @@ export function SettlementView({ store }: SettlementViewProps) {
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums text-muted-foreground">{formatPeso(paid)}</TableCell>
+                                        <TableCell className="text-right tabular-nums text-indigo-600 dark:text-indigo-400">
+                                            {collectionPaid > 0 ? formatPeso(collectionPaid) : '—'}
+                                        </TableCell>
                                         <TableCell className={cn('pr-6 text-right font-semibold tabular-nums', isOwed ? 'text-green-600 dark:text-green-400' : owes ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground')}>
                                             {isOwed ? '+' : ''}{formatPeso(net)}
                                         </TableCell>
@@ -288,6 +308,7 @@ export function SettlementView({ store }: SettlementViewProps) {
                             <TableRow>
                                 <TableCell className="pl-6">Total</TableCell>
                                 <TableCell className="text-right font-semibold tabular-nums">{formatPeso(totalSpend)}</TableCell>
+                                <TableCell />
                                 <TableCell className="pr-6" />
                             </TableRow>
                         </TableFooter>

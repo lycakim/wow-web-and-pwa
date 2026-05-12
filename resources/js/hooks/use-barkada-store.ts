@@ -1,4 +1,4 @@
-import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Expense, GroceryItem, GrocerySection, Member, Settlement, Trip } from '@/types/barkada';
+import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, Expense, GroceryItem, GrocerySection, Member, Settlement, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useState } from 'react';
 
@@ -16,6 +16,8 @@ const DEFAULT_STORE: BarkadaStore = {
     hiddenBuiltInCategories: [],
     inactiveCategories: [],
     groceryItems: [],
+    collections: [],
+    collectionPayments: [],
 };
 
 function persist(store: BarkadaStore): void {
@@ -26,8 +28,13 @@ function persist(store: BarkadaStore): void {
     }
 }
 
-export function calculateSettlements(members: Member[], expenses: Expense[]): Settlement[] {
-    if (members.length === 0 || expenses.length === 0) {
+export function calculateSettlements(
+    members: Member[],
+    expenses: Expense[],
+    collections: Collection[] = [],
+    collectionPayments: CollectionPayment[] = [],
+): Settlement[] {
+    if (members.length === 0 || (expenses.length === 0 && collectionPayments.length === 0)) {
         return [];
     }
 
@@ -73,6 +80,19 @@ export function calculateSettlements(members: Member[], expenses: Expense[]): Se
                 balances[memberId] -= share;
             }
         }
+    }
+
+    // Factor in collection payments: each payment is a transfer from payer → collector.
+    // The payer gets credit (they've already put in money); the collector is debited
+    // (they hold that money and will offset it when the expense is eventually logged).
+    const collectorByCollection: Record<string, string> = Object.fromEntries(
+        collections.map((c) => [c.id, c.collectorId]),
+    );
+    for (const payment of collectionPayments) {
+        const collectorId = collectorByCollection[payment.collectionId];
+        if (!collectorId) continue;
+        balances[payment.fromMemberId] = (balances[payment.fromMemberId] ?? 0) + payment.amount;
+        balances[collectorId] = (balances[collectorId] ?? 0) - payment.amount;
     }
 
     const creditors: Array<{ id: string; amount: number }> = [];
@@ -166,6 +186,8 @@ export function useBarkadaStore() {
                     hiddenBuiltInCategories: parsed.hiddenBuiltInCategories ?? [],
                     inactiveCategories: parsed.inactiveCategories ?? [],
                     groceryItems: parsed.groceryItems ?? [],
+                    collections: parsed.collections ?? [],
+                    collectionPayments: parsed.collectionPayments ?? [],
                 });
             }
         } catch {
@@ -371,6 +393,43 @@ export function useBarkadaStore() {
         }));
     };
 
+    const addCollection = (name: string, targetAmount: number, collectorId: string, memberIds: string[]) => {
+        const collection: Collection = {
+            id: crypto.randomUUID(),
+            name: name.trim(),
+            targetAmount,
+            collectorId,
+            memberIds,
+            createdAt: new Date().toISOString(),
+        };
+        updateStore((prev) => ({ ...prev, collections: [...prev.collections, collection] }));
+    };
+
+    const removeCollection = (id: string) => {
+        updateStore((prev) => ({
+            ...prev,
+            collections: prev.collections.filter((c) => c.id !== id),
+            collectionPayments: prev.collectionPayments.filter((p) => p.collectionId !== id),
+        }));
+    };
+
+    const addCollectionPayment = (collectionId: string, fromMemberId: string, amount: number, paidAt: string, note?: string) => {
+        const payment: CollectionPayment = {
+            id: crypto.randomUUID(),
+            collectionId,
+            fromMemberId,
+            amount,
+            paidAt,
+            createdAt: new Date().toISOString(),
+            ...(note ? { note } : {}),
+        };
+        updateStore((prev) => ({ ...prev, collectionPayments: [...prev.collectionPayments, payment] }));
+    };
+
+    const removeCollectionPayment = (id: string) => {
+        updateStore((prev) => ({ ...prev, collectionPayments: prev.collectionPayments.filter((p) => p.id !== id) }));
+    };
+
     const clearAll = () => {
         persist(DEFAULT_STORE);
         setStore(DEFAULT_STORE);
@@ -402,6 +461,10 @@ export function useBarkadaStore() {
         assignGroceryItem,
         removeGroceryItem,
         clearCheckedGroceryItems,
+        addCollection,
+        removeCollection,
+        addCollectionPayment,
+        removeCollectionPayment,
         clearAll,
     };
 }
