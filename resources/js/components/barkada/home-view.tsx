@@ -6,7 +6,7 @@ import { calculateSettlements, getSpendByCategory, getTotalBudget, getTotalSpend
 import { cn } from '@/lib/utils';
 import type { BarkadaStore, Member, Trip, View } from '@/types/barkada';
 import { calculateMemberBudgetShare, getActiveBudgetItems, getActiveExpenses, getAllCategories } from '@/types/barkada';
-import { ArrowRight, CalendarDays, HandCoins, MapPin, Pencil, Plus, Wallet } from 'lucide-react';
+import { ArrowRight, CalendarDays, MapPin, Pencil, Plus, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const MY_MEMBER_KEY = 'barkada-my-member-id';
@@ -343,34 +343,33 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                 </button>
             </div>
 
-            {/* 2-column grid on desktop */}
+            {/* 2-column grid */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
-                {/* My balance hero */}
+                {/* My balance */}
                 {me && myBudgetShare > 0 && (
                     <button type="button" onClick={() => onNavigate('mybalance')} className="h-full w-full text-left">
                         <div className={cn(
                             'flex h-full flex-col overflow-hidden rounded-2xl p-4 text-white shadow-sm transition-opacity hover:opacity-95',
                             allPaidUp ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-violet-600 to-purple-700',
                         )}>
-                            <div className="flex items-center gap-2.5">
-                                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
+                            <div className="flex items-center gap-2">
+                                <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold">
                                     {getInitials(me.name)}
                                 </span>
-                                <p className="text-sm text-white/80">
-                                    Hi, {me.name.split(' ')[0]}!{' '}
-                                    {allPaidUp ? "You're all paid up" : 'You still need to bring'}
+                                <p className="text-xs text-white/80">
+                                    Hi, {me.name.split(' ')[0]}! {allPaidUp ? "You're all paid up" : 'You still need to bring'}
                                 </p>
-                                <ArrowRight className="ml-auto size-4 shrink-0 text-white/60" />
+                                <ArrowRight className="ml-auto size-3.5 shrink-0 text-white/60" />
                             </div>
                             {allPaidUp ? (
-                                <p className="mt-2 text-3xl font-bold">🎉 All settled!</p>
+                                <p className="mt-2 text-2xl font-bold">🎉 All settled!</p>
                             ) : (
-                                <p className="mt-2 text-4xl font-bold tabular-nums">{formatPeso(myStillNeeded)}</p>
+                                <p className="mt-1.5 text-3xl font-bold tabular-nums">{formatPeso(myStillNeeded)}</p>
                             )}
-                            <div className="mt-auto flex items-center gap-4 border-t border-white/20 pt-3 text-xs text-white/70">
-                                <span>Share: {formatPeso(myBudgetShare)}</span>
-                                {myAdvancePaid > 0 && <span>Paid: {formatPeso(myAdvancePaid)}</span>}
+                            <div className="mt-auto flex items-center gap-3 border-t border-white/20 pt-2.5 text-[11px] text-white/70">
+                                <span>Share {formatPeso(myBudgetShare)}</span>
+                                {myAdvancePaid > 0 && <span>· Paid {formatPeso(myAdvancePaid)}</span>}
                             </div>
                         </div>
                     </button>
@@ -381,43 +380,45 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                     <button type="button" onClick={() => onNavigate('budget')} className="h-full w-full text-left">
                         <Card className="h-full transition-colors hover:bg-muted/40">
                             <CardContent className="flex h-full flex-col p-4">
-                                <div className="mb-3 flex items-center gap-2">
-                                    <Wallet className="size-4 text-muted-foreground" />
-                                    <span className="text-sm font-semibold">Budget</span>
-                                    <ArrowRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
+                                <div className="mb-2 flex items-center gap-1.5">
+                                    <Wallet className="size-3.5 text-muted-foreground" />
+                                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Budget</span>
+                                    <ArrowRight className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
                                 </div>
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
                                     <ProgressRing
                                         value={totalSpend}
                                         max={totalBudget > 0 ? totalBudget : totalSpend}
+                                        size={64}
+                                        strokeWidth={6}
                                         colorClass={isOverBudget ? 'text-destructive' : 'text-indigo-500'}
                                     />
-                                    <div className="flex-1">
+                                    <div className="flex-1 min-w-0">
                                         {totalBudget > 0 ? (
                                             <>
-                                                <p className="text-xs text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</p>
-                                                <p className={cn('text-2xl font-bold tabular-nums leading-tight', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+                                                <p className="text-[11px] text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</p>
+                                                <p className={cn('text-xl font-bold tabular-nums leading-tight', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
                                                     {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
                                                 </p>
-                                                <p className="text-xs text-muted-foreground">of {formatPeso(totalBudget)} · spent {formatPeso(totalSpend)}</p>
+                                                <p className="text-[11px] text-muted-foreground">of {formatPeso(totalBudget)}</p>
                                                 {perPersonRemaining !== null && members.length > 1 && (
-                                                    <p className="mt-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                                                        ≈ {formatPeso(perPersonRemaining)} each left
+                                                    <p className="mt-0.5 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+                                                        ≈ {formatPeso(perPersonRemaining)} each
                                                     </p>
                                                 )}
                                             </>
                                         ) : (
                                             <>
-                                                <p className="text-xs text-muted-foreground">Spent</p>
-                                                <p className="text-2xl font-bold tabular-nums">{formatPeso(totalSpend)}</p>
+                                                <p className="text-[11px] text-muted-foreground">Spent</p>
+                                                <p className="text-xl font-bold tabular-nums">{formatPeso(totalSpend)}</p>
                                             </>
                                         )}
                                     </div>
                                 </div>
                                 {topCategories.length > 0 && (
-                                    <div className="mt-auto pt-3 flex flex-wrap gap-1.5">
+                                    <div className="mt-auto flex flex-wrap gap-1 pt-2.5">
                                         {topCategories.map(({ key, amount, meta }) => (
-                                            <span key={key} className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium', meta.bgClass, meta.textClass)}>
+                                            <span key={key} className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium', meta.bgClass, meta.textClass)}>
                                                 {meta.icon} {meta.shortLabel} · {formatPeso(amount)}
                                             </span>
                                         ))}
@@ -431,45 +432,45 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                 {/* Collections */}
                 {collections.length > 0 && (
                     <Card className="h-full">
-                        <CardHeader className="px-4 pb-2 pt-4">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm">Collections</CardTitle>
-                                <button type="button" onClick={() => onNavigate('collections')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                        <CardContent className="p-4">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Collections</span>
+                                <button type="button" onClick={() => onNavigate('collections')} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
                                     View all
                                 </button>
                             </div>
                             {totalCollectionTarget > 0 && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="mb-3 text-[11px] text-muted-foreground">
                                     {formatPeso(totalCollected)} of {formatPeso(totalCollectionTarget)} collected
                                 </p>
                             )}
-                        </CardHeader>
-                        <CardContent className="space-y-3 px-4 pb-4">
-                            {collections.map((col) => {
-                                const paid = collectionPayments.filter((p) => p.collectionId === col.id).reduce((s, p) => s + p.amount, 0);
-                                const pct = col.targetAmount > 0 ? Math.min(100, (paid / col.targetAmount) * 100) : 0;
-                                const done = paid >= col.targetAmount;
-                                const unpaidMemberIds = collectionMemberStatus(col.id, col.memberIds, col.targetAmount);
-                                const unpaidNames = unpaidMemberIds.map((id) => memberById[id]?.name).filter(Boolean);
-                                return (
-                                    <div key={col.id}>
-                                        <div className="mb-1 flex items-center justify-between text-xs">
-                                            <span className="font-medium">{col.name}</span>
-                                            <span className={cn('tabular-nums', done ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground')}>
-                                                {formatPeso(paid)} / {formatPeso(col.targetAmount)}
-                                            </span>
+                            <div className="space-y-3">
+                                {collections.map((col) => {
+                                    const paid = collectionPayments.filter((p) => p.collectionId === col.id).reduce((s, p) => s + p.amount, 0);
+                                    const pct = col.targetAmount > 0 ? Math.min(100, (paid / col.targetAmount) * 100) : 0;
+                                    const done = paid >= col.targetAmount;
+                                    const unpaidMemberIds = collectionMemberStatus(col.id, col.memberIds, col.targetAmount);
+                                    const unpaidNames = unpaidMemberIds.map((id) => memberById[id]?.name).filter(Boolean);
+                                    return (
+                                        <div key={col.id}>
+                                            <div className="mb-1 flex items-center justify-between text-xs">
+                                                <span className="font-medium">{col.name}</span>
+                                                <span className={cn('tabular-nums', done ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground')}>
+                                                    {formatPeso(paid)} / {formatPeso(col.targetAmount)}
+                                                </span>
+                                            </div>
+                                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                                <div className={cn('h-full rounded-full transition-all', done ? 'bg-green-500' : 'bg-indigo-500')} style={{ width: `${pct}%` }} />
+                                            </div>
+                                            {!done && unpaidNames.length > 0 && (
+                                                <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                                                    ⚠️ {unpaidNames.length === 1 ? unpaidNames[0] : `${unpaidNames.slice(0, 2).join(', ')}${unpaidNames.length > 2 ? ` +${unpaidNames.length - 2}` : ''}`} haven't paid
+                                                </p>
+                                            )}
                                         </div>
-                                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                                            <div className={cn('h-full rounded-full transition-all', done ? 'bg-green-500' : 'bg-indigo-500')} style={{ width: `${pct}%` }} />
-                                        </div>
-                                        {!done && unpaidNames.length > 0 && (
-                                            <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
-                                                ⚠️ {unpaidNames.length === 1 ? unpaidNames[0] : `${unpaidNames.slice(0, 2).join(', ')}${unpaidNames.length > 2 ? ` +${unpaidNames.length - 2}` : ''}`} haven't paid yet
-                                            </p>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </CardContent>
                     </Card>
                 )}
@@ -477,28 +478,26 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                 {/* Recent expenses */}
                 {recentExpenses.length > 0 && (
                     <Card className="h-full">
-                        <CardHeader className="px-4 pb-2 pt-4">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm">Recent Expenses</CardTitle>
-                                <button type="button" onClick={() => onNavigate('expenses')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                        <CardContent className="p-4">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recent Expenses</span>
+                                <button type="button" onClick={() => onNavigate('expenses')} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
                                     View all
                                 </button>
                             </div>
                             {biggestSpenderMember && activeExpenses.length > 1 && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="mb-2 text-[11px] text-muted-foreground">
                                     🏆 <span className="font-medium text-foreground">{biggestSpenderMember.name}</span> paid the most — {formatPeso(biggestSpender![1])}
                                 </p>
                             )}
-                        </CardHeader>
-                        <CardContent className="px-0 pb-2">
                             <div className="divide-y">
                                 {recentExpenses.map((e) => {
                                     const paidBy = memberById[e.paidById];
                                     return (
-                                        <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
+                                        <div key={e.id} className="flex items-center gap-3 py-2">
                                             <div className="min-w-0 flex-1">
                                                 <p className="truncate text-sm font-medium">{e.description}</p>
-                                                <p className="text-xs text-muted-foreground">
+                                                <p className="text-[11px] text-muted-foreground">
                                                     {paidBy?.name ?? '?'} · {new Date(e.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
                                                 </p>
                                             </div>
@@ -509,24 +508,6 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
                             </div>
                         </CardContent>
                     </Card>
-                )}
-
-                {/* Settlement nudge — full width */}
-                {settlements.length > 0 && (
-                    <button type="button" onClick={() => onNavigate('settlement')} className="w-full text-left sm:col-span-2">
-                        <Card className="border-orange-200 bg-orange-50 transition-colors hover:bg-orange-100 dark:border-orange-900/40 dark:bg-orange-950/20 dark:hover:bg-orange-950/30">
-                            <CardContent className="flex items-center gap-3 p-4">
-                                <HandCoins className="size-5 shrink-0 text-orange-600 dark:text-orange-400" />
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">
-                                        {settlements.length} payment{settlements.length !== 1 ? 's' : ''} needed
-                                    </p>
-                                    <p className="text-xs text-orange-600 dark:text-orange-400">Tap to see who owes whom</p>
-                                </div>
-                                <ArrowRight className="size-4 shrink-0 text-orange-500" />
-                            </CardContent>
-                        </Card>
-                    </button>
                 )}
 
             </div>
