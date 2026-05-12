@@ -89,61 +89,139 @@ function AddCollectionSheet({
         onOpenChange(false);
     };
 
+    const parsedAmount = parseFloat(amount);
+    const perPerson = !isNaN(parsedAmount) && parsedAmount > 0 && selectedMemberIds.length > 0
+        ? parsedAmount / selectedMemberIds.length
+        : null;
+
     return (
         <AppModal open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }} title="New Collection">
-                <div>
-                    <div className="space-y-1.5">
-                        <Label>Name</Label>
-                        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Room Downpayment, Van Deposit" aria-invalid={!!errors.name} />
-                        {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-                    </div>
+            <div className="space-y-5">
+                {/* Name */}
+                <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Collection Name</Label>
+                    <Input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g. Room Downpayment, Van Deposit"
+                        aria-invalid={!!errors.name}
+                        className="h-11"
+                    />
+                    {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+                </div>
 
-                    <div className="space-y-1.5">
-                        <Label>Target Amount (₱)</Label>
-                        <Input type="number" min="0" step="100" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" aria-invalid={!!errors.amount} />
-                        {errors.amount && <p className="text-xs text-destructive">{errors.amount}</p>}
-                        {!errors.amount && amount && selectedMemberIds.length > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                                = <span className="font-semibold text-foreground">{formatPeso(parseFloat(amount) / selectedMemberIds.length)}</span> per person ({selectedMemberIds.length} members)
-                            </p>
-                        )}
+                {/* Target amount + per-person preview */}
+                <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Target Amount</Label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₱</span>
+                        <Input
+                            type="number"
+                            min="0"
+                            step="100"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            placeholder="0.00"
+                            aria-invalid={!!errors.amount}
+                            className="h-11 pl-7"
+                        />
                     </div>
+                    {errors.amount && <p className="text-xs text-destructive">{errors.amount}</p>}
+                    {perPerson !== null && (
+                        <div className="flex items-center justify-between rounded-xl bg-indigo-50 px-3.5 py-2.5 dark:bg-indigo-950/40">
+                            <span className="text-xs text-indigo-700 dark:text-indigo-300">Per person ({selectedMemberIds.length} members)</span>
+                            <span className="text-sm font-bold tabular-nums text-indigo-700 dark:text-indigo-300">{formatPeso(perPerson)}</span>
+                        </div>
+                    )}
+                </div>
 
-                    <div className="space-y-1.5">
-                        <Label>Collector (who receives the money)</Label>
-                        <Select value={collectorId} onValueChange={setCollectorId}>
-                            <SelectTrigger aria-invalid={!!errors.collectorId}><SelectValue placeholder="Select member" /></SelectTrigger>
-                            <SelectContent>
-                                {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        {errors.collectorId && <p className="text-xs text-destructive">{errors.collectorId}</p>}
+                {/* Collector — avatar picker */}
+                <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Collector <span className="font-normal normal-case text-muted-foreground/70">· receives the money</span>
+                    </Label>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                        {members.map((m) => {
+                            const selected = collectorId === m.id;
+                            return (
+                                <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => setCollectorId(m.id)}
+                                    className={cn(
+                                        'flex shrink-0 flex-col items-center gap-1.5 rounded-2xl border-2 px-3 py-2.5 text-center transition-all',
+                                        selected
+                                            ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40'
+                                            : 'border-transparent bg-muted/50 hover:bg-muted',
+                                    )}
+                                >
+                                    <span className={cn(
+                                        'inline-flex size-9 items-center justify-center rounded-full font-bold text-white text-xs',
+                                        avatarColor(members, m.id),
+                                        selected && 'ring-2 ring-indigo-600 ring-offset-2',
+                                    )}>
+                                        {getInitials(m.name)}
+                                    </span>
+                                    <span className={cn(
+                                        'max-w-[56px] truncate text-[11px] font-medium leading-tight',
+                                        selected ? 'text-indigo-700 dark:text-indigo-300' : 'text-muted-foreground',
+                                    )}>
+                                        {m.name}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
+                    {errors.collectorId && <p className="text-xs text-destructive">{errors.collectorId}</p>}
+                </div>
 
-                    <div className="space-y-1.5">
-                        <Label>Who is splitting this?</Label>
-                        <div className="flex flex-wrap gap-2">
-                            {members.map((m) => (
+                {/* Member pills with avatars */}
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Who is splitting this?</Label>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedMemberIds(
+                                selectedMemberIds.length === members.length ? [] : members.map((m) => m.id)
+                            )}
+                            className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+                        >
+                            {selectedMemberIds.length === members.length ? 'Deselect all' : 'Select all'}
+                        </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {members.map((m) => {
+                            const selected = selectedMemberIds.includes(m.id);
+                            return (
                                 <button
                                     key={m.id}
                                     type="button"
                                     onClick={() => toggleMember(m.id)}
                                     className={cn(
-                                        'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                                        selectedMemberIds.includes(m.id)
+                                        'flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all',
+                                        selected
                                             ? 'border-indigo-600 bg-indigo-600 text-white'
-                                            : 'border-border bg-background',
+                                            : 'border-border bg-background text-foreground hover:bg-muted',
                                     )}
                                 >
+                                    <span className={cn(
+                                        'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold',
+                                        selected ? 'bg-white/20 text-white' : cn(avatarColor(members, m.id), 'text-white'),
+                                    )}>
+                                        {getInitials(m.name)}
+                                    </span>
                                     {m.name}
                                 </button>
-                            ))}
-                        </div>
-                        {errors.members && <p className="text-xs text-destructive">{errors.members}</p>}
+                            );
+                        })}
                     </div>
-
-                    <Button onClick={submit} className="w-full bg-indigo-600 hover:bg-indigo-700">Create Collection</Button>
+                    {errors.members && <p className="text-xs text-destructive">{errors.members}</p>}
                 </div>
+
+                <Button onClick={submit} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                    Create Collection
+                </Button>
+            </div>
         </AppModal>
     );
 }
