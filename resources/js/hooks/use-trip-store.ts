@@ -620,13 +620,14 @@ export function useTripStore(tripId: string) {
 
     // ── Members ───────────────────────────────────────────────────────────────
 
-    const addMember = async (name: string) => {
+    const addMember = async (name: string): Promise<string> => {
         const id = crypto.randomUUID();
         setStore((prev) => ({ ...prev, members: [...prev.members, { id, name: name.trim() }] }));
         await trySupabase(
             async () => { await supabase.from('members').insert({ id, trip_id: tripId, name: name.trim() }); },
             { type: 'addMember', id, name: name.trim() },
         );
+        return id;
     };
 
     const updateMember = async (id: string, name: string) => {

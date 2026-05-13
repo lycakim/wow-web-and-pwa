@@ -11,6 +11,7 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 
 interface SettlementViewProps {
     store: BarkadaStore;
+    myMemberId?: string;
 }
 
 const AVATAR_COLORS = [
@@ -90,7 +91,7 @@ function MemberAvatar({ name, members, id, size = 'md' }: { name: string; member
     );
 }
 
-export function SettlementView({ store }: SettlementViewProps) {
+export function SettlementView({ store, myMemberId }: SettlementViewProps) {
     const { members, collections, collectionPayments } = store;
     const activeExpenses = getActiveExpenses(store);
     const settlements = calculateSettlements(members, activeExpenses, collections, collectionPayments);
@@ -173,13 +174,13 @@ export function SettlementView({ store }: SettlementViewProps) {
                                             <div className="flex items-center gap-2">
                                                 <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
                                                     <MemberAvatar name={from.name} members={members} id={from.id} />
-                                                    <span className="max-w-full truncate text-center text-xs font-medium">{from.name}</span>
+                                                    <span className="max-w-full truncate text-center text-xs font-medium">{from.id === myMemberId ? 'You' : from.name}</span>
                                                     <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-950/40 dark:text-red-400">pays</span>
                                                 </div>
                                                 <ArrowRight className="size-5 shrink-0 text-muted-foreground" />
                                                 <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
                                                     <MemberAvatar name={to.name} members={members} id={to.id} />
-                                                    <span className="max-w-full truncate text-center text-xs font-medium">{to.name}</span>
+                                                    <span className="max-w-full truncate text-center text-xs font-medium">{to.id === myMemberId ? 'You' : to.name}</span>
                                                     <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-600 dark:bg-green-950/40 dark:text-green-400">receives</span>
                                                 </div>
                                             </div>
@@ -207,14 +208,14 @@ export function SettlementView({ store }: SettlementViewProps) {
                                                 <TableCell className="pl-6">
                                                     <div className="flex items-center gap-2.5">
                                                         <MemberAvatar name={from.name} members={members} id={from.id} />
-                                                        <span className={from.name === '(Deleted)' ? 'font-medium italic text-muted-foreground' : 'font-medium'}>{from.name}</span>
+                                                        <span className={from.name === '(Deleted)' ? 'font-medium italic text-muted-foreground' : 'font-medium'}>{from.id === myMemberId ? 'You' : from.name}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell><ArrowRight className="size-4 text-muted-foreground" /></TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2.5">
                                                         <MemberAvatar name={to.name} members={members} id={to.id} />
-                                                        <span className={to.name === '(Deleted)' ? 'font-medium italic text-muted-foreground' : 'font-medium'}>{to.name}</span>
+                                                        <span className={to.name === '(Deleted)' ? 'font-medium italic text-muted-foreground' : 'font-medium'}>{to.id === myMemberId ? 'You' : to.name}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="pr-6 text-right font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{formatPeso(s.amount)}</TableCell>
@@ -250,7 +251,10 @@ export function SettlementView({ store }: SettlementViewProps) {
                                 <div key={m.id} className="flex items-center gap-3 px-4 py-3">
                                     <MemberAvatar name={m.name} members={members} id={m.id} />
                                     <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-medium">{m.name}</p>
+                                        <p className="truncate text-sm font-medium">
+                                            {m.name}
+                                            {m.id === myMemberId && <span className="ml-1.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">YOU</span>}
+                                        </p>
                                         <p className="text-xs text-muted-foreground">Expenses paid {formatPeso(paid)}</p>
                                         {collectionPaid > 0 && (
                                             <p className="text-xs text-indigo-600 dark:text-indigo-400">+ Collections {formatPeso(collectionPaid)}</p>
@@ -290,7 +294,10 @@ export function SettlementView({ store }: SettlementViewProps) {
                                         <TableCell className="pl-6">
                                             <div className="flex items-center gap-2.5">
                                                 <MemberAvatar name={m.name} members={members} id={m.id} />
-                                                <span className="font-medium">{m.name}</span>
+                                                <span className="font-medium">
+                                                    {m.name}
+                                                    {m.id === myMemberId && <span className="ml-1.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">YOU</span>}
+                                                </span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums text-muted-foreground">{formatPeso(paid)}</TableCell>

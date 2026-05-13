@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 
 interface MembersViewProps {
     members: Member[];
+    myMemberId?: string;
     onAdd: (name: string) => void;
     onUpdate: (id: string, name: string) => void;
     onRemove: (id: string) => void;
@@ -150,7 +151,7 @@ function DeleteDialog({
     );
 }
 
-export function MembersView({ members, onAdd, onUpdate, onRemove }: MembersViewProps) {
+export function MembersView({ members, myMemberId, onAdd, onUpdate, onRemove }: MembersViewProps) {
     const [addOpen, setAddOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<Member | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
@@ -196,6 +197,9 @@ export function MembersView({ members, onAdd, onUpdate, onRemove }: MembersViewP
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <span className="font-medium">{member.name}</span>
+                                                {member.id === myMemberId && (
+                                                    <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">You</span>
+                                                )}
                                             </div>
                                         </TableCell>
                                         <TableCell className="pr-6 text-right">

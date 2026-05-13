@@ -138,6 +138,10 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
     const [leaveCountdown, setLeaveCountdown] = useState(3);
     const { dark, toggle: toggleDark } = useDarkMode();
     const { name: currentUserName, saveName, isSet: nameIsSet } = useCurrentUser();
+    const [myMemberId, setMyMemberId] = useState<string | null>(() => {
+        const saved = localStorage.getItem(`barkada-joined-${tripId}`);
+        return saved && saved !== 'new' ? saved : null;
+    });
 
     const {
         store,
@@ -182,13 +186,16 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
     useEffect(() => {
         if (!isHydrated || !nameIsSet || !currentUserName) return;
         const joinedKey = `barkada-joined-${tripId}`;
-        if (localStorage.getItem(joinedKey)) return;
+        if (localStorage.getItem(joinedKey) && localStorage.getItem(joinedKey) !== 'new') return;
         const match = store.members.find((m) => m.name.toLowerCase() === currentUserName.toLowerCase());
         if (match) {
             localStorage.setItem(joinedKey, match.id);
-        } else {
-            localStorage.setItem(joinedKey, 'new');
-            addMember(currentUserName);
+            setMyMemberId(match.id);
+        } else if (!localStorage.getItem(joinedKey)) {
+            addMember(currentUserName).then((id) => {
+                localStorage.setItem(joinedKey, id);
+                setMyMemberId(id);
+            });
         }
     }, [isHydrated, nameIsSet, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -267,15 +274,16 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                 saveName(n);
                 setEditingName(false);
                 const joinedKey = `barkada-joined-${tripId}`;
-                if (!localStorage.getItem(joinedKey)) {
+                if (!localStorage.getItem(joinedKey) || localStorage.getItem(joinedKey) === 'new') {
                     const match = store.members.find((m) => m.name.toLowerCase() === n.toLowerCase());
                     if (match) {
-                        // Name matches an existing member — claim them, no duplicate
                         localStorage.setItem(joinedKey, match.id);
+                        setMyMemberId(match.id);
                     } else {
-                        // New person — add as member
-                        localStorage.setItem(joinedKey, 'new');
-                        addMember(n);
+                        addMember(n).then((id) => {
+                            localStorage.setItem(joinedKey, id);
+                            setMyMemberId(id);
+                        });
                     }
                 }
             }} />
@@ -432,10 +440,11 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                         </div>
                     ) : (
                         <>
-                            {view === 'home' && <HomeView store={store} onUpdateTrip={updateTrip} onNavigate={setView} />}
+                            {view === 'home' && <HomeView store={store} myMemberId={myMemberId ?? undefined} onUpdateTrip={updateTrip} onNavigate={setView} />}
                             {view === 'members' && (
                                 <MembersView
                                     members={store.members}
+                                    myMemberId={myMemberId ?? undefined}
                                     onAdd={addMember}
                                     onUpdate={updateMember}
                                     onRemove={removeMember}
@@ -452,9 +461,9 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                                 />
                             )}
                             {view === 'expenses' && (
-                                <ExpensesView store={store} onAdd={addExpense} onRemove={removeExpense} currentUserName={currentUserName || undefined} />
+                                <ExpensesView store={store} onAdd={addExpense} onRemove={removeExpense} currentUserName={currentUserName || undefined} myMemberId={myMemberId ?? undefined} />
                             )}
-                            {view === 'settlement' && <SettlementView store={store} />}
+                            {view === 'settlement' && <SettlementView store={store} myMemberId={myMemberId ?? undefined} />}
                             {view === 'categories' && (
                                 <CategoriesView
                                     store={store}
@@ -468,6 +477,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                                 <CarpoolsView
                                     members={store.members}
                                     carpools={store.carpools}
+                                    myMemberId={myMemberId ?? undefined}
                                     onAdd={addCarpool}
                                     onUpdate={updateCarpool}
                                     onRemove={removeCarpool}
@@ -490,6 +500,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                                 <CollectionsView
                                     store={store}
                                     currentUserName={currentUserName || undefined}
+                                    myMemberId={myMemberId ?? undefined}
                                     onAddCollection={addCollection}
                                     onRemoveCollection={removeCollection}
                                     onAddPayment={addCollectionPayment}
@@ -497,7 +508,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                                 />
                             )}
                             {view === 'mybalance' && (
-                                <MyBalanceView store={store} />
+                                <MyBalanceView store={store} myMemberId={myMemberId ?? undefined} />
                             )}
                         </>
                     )}

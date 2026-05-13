@@ -328,6 +328,7 @@ function CollectionCard({
     members,
     payments,
     currentUserName,
+    myMemberId,
     onAddPayment,
     onRemovePayment,
     onRemoveCollection,
@@ -336,6 +337,7 @@ function CollectionCard({
     members: Member[];
     payments: CollectionPayment[];
     currentUserName?: string;
+    myMemberId?: string;
     onAddPayment: (collectionId: string) => void;
     onRemovePayment: (id: string) => void;
     onRemoveCollection: (id: string) => void;
@@ -367,7 +369,7 @@ function CollectionCard({
                     <div className="min-w-0 flex-1">
                         <CardTitle className="text-base">{collection.name}</CardTitle>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                            Collector: <span className="font-medium text-foreground">{collector?.name ?? '?'}</span>
+                            Collector: <span className="font-medium text-foreground">{collection.collectorId === myMemberId ? 'You' : (collector?.name ?? '?')}</span>
                             {' · '}{splitMembers.length} member{splitMembers.length !== 1 ? 's' : ''}
                             {' · '}<span className="font-medium text-foreground">{formatPeso(sharePerPerson)}</span>/person
                         </p>
@@ -428,7 +430,9 @@ function CollectionCard({
                                 return (
                                     <div key={m.id} className="flex items-center gap-3 px-4 py-2.5">
                                         <MemberAvatar members={members} id={m.id} size="sm" />
-                                        <span className="min-w-0 flex-1 truncate text-sm font-medium">{m.name}</span>
+                                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                                            {m.id === myMemberId ? 'You' : m.name}
+                                        </span>
                                         <div className="flex items-center gap-3 shrink-0 text-right">
                                             <div className="w-20">
                                                 <p className="text-xs text-muted-foreground">Paid</p>
@@ -458,10 +462,10 @@ function CollectionCard({
                                                 {/* Arrow visualization */}
                                                 <div className="flex min-w-0 flex-1 items-center gap-2">
                                                     <MemberAvatar members={members} id={p.fromMemberId} size="sm" />
-                                                    <span className="text-sm font-medium truncate">{from?.name ?? '?'}</span>
+                                                    <span className="text-sm font-medium truncate">{p.fromMemberId === myMemberId ? 'You' : (from?.name ?? '?')}</span>
                                                     <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" />
                                                     <MemberAvatar members={members} id={collection.collectorId} size="sm" />
-                                                    <span className="text-sm font-medium truncate">{collector?.name ?? '?'}</span>
+                                                    <span className="text-sm font-medium truncate">{collection.collectorId === myMemberId ? 'You' : (collector?.name ?? '?')}</span>
                                                 </div>
                                                 <div className="shrink-0 text-right">
                                                     <p className="text-sm font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{formatPeso(p.amount)}</p>
@@ -514,13 +518,14 @@ function CollectionCard({
 interface CollectionsViewProps {
     store: BarkadaStore;
     currentUserName?: string;
+    myMemberId?: string;
     onAddCollection: (name: string, targetAmount: number, collectorId: string, memberIds: string[]) => void;
     onRemoveCollection: (id: string) => void;
     onAddPayment: (collectionId: string, fromMemberId: string, amount: number, paidAt: string, note?: string) => void;
     onRemovePayment: (id: string) => void;
 }
 
-export function CollectionsView({ store, currentUserName, onAddCollection, onRemoveCollection, onAddPayment, onRemovePayment }: CollectionsViewProps) {
+export function CollectionsView({ store, currentUserName, myMemberId, onAddCollection, onRemoveCollection, onAddPayment, onRemovePayment }: CollectionsViewProps) {
     const { members, collections, collectionPayments } = store;
     const [addCollectionOpen, setAddCollectionOpen] = useState(false);
     const [addPaymentFor, setAddPaymentFor] = useState<Collection | null>(null);
@@ -564,6 +569,7 @@ export function CollectionsView({ store, currentUserName, onAddCollection, onRem
                                 members={members}
                                 payments={payments}
                                 currentUserName={currentUserName}
+                                myMemberId={myMemberId}
                                 onAddPayment={() => setAddPaymentFor(col)}
                                 onRemovePayment={onRemovePayment}
                                 onRemoveCollection={onRemoveCollection}

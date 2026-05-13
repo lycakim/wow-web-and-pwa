@@ -89,6 +89,7 @@ function getDaysInfo(startDate: string, endDate: string): {
 
 interface HomeViewProps {
     store: BarkadaStore;
+    myMemberId?: string;
     onUpdateTrip: (trip: Trip) => void;
     onNavigate: (view: View) => void;
 }
@@ -123,7 +124,7 @@ function TripEditForm({ trip, onSave, onCancel }: { trip: Trip; onSave: (t: Trip
     );
 }
 
-export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
+export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNavigate }: HomeViewProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [myMemberId, setMyMemberId] = useState('');
 
@@ -151,10 +152,12 @@ export function HomeView({ store, onUpdateTrip, onNavigate }: HomeViewProps) {
         const saved = localStorage.getItem(MY_MEMBER_KEY);
         if (saved && members.some((m) => m.id === saved)) {
             setMyMemberId(saved);
+        } else if (myMemberIdProp && members.some((m) => m.id === myMemberIdProp)) {
+            setMyMemberId(myMemberIdProp);
         } else if (members.length > 0) {
             setMyMemberId(members[0].id);
         }
-    }, [members]);
+    }, [members, myMemberIdProp]);
 
     const me = members.find((m) => m.id === myMemberId);
     const bufferContingencyShare = members.length > 0

@@ -33,21 +33,25 @@ const MY_MEMBER_KEY = 'barkada-my-member-id';
 
 interface MyBalanceViewProps {
     store: BarkadaStore;
+    myMemberId?: string;
 }
 
-export function MyBalanceView({ store }: MyBalanceViewProps) {
+export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceViewProps) {
     const { members, budgetItems, carpools, collections, collectionPayments } = store;
     const [myMemberId, setMyMemberId] = useState<string>('');
 
-    // Persist "I am" selection
+    // Persist "I am" selection — prefer join-based ID, fall back to saved, then first member
     useEffect(() => {
         const saved = localStorage.getItem(MY_MEMBER_KEY);
-        if (saved && members.some((m) => m.id === saved)) {
+        if (myMemberIdProp && members.some((m) => m.id === myMemberIdProp)) {
+            setMyMemberId(myMemberIdProp);
+            localStorage.setItem(MY_MEMBER_KEY, myMemberIdProp);
+        } else if (saved && members.some((m) => m.id === saved)) {
             setMyMemberId(saved);
         } else if (members.length > 0) {
             setMyMemberId(members[0].id);
         }
-    }, [members]);
+    }, [members, myMemberIdProp]);
 
     const selectMe = (id: string) => {
         setMyMemberId(id);
@@ -168,7 +172,7 @@ export function MyBalanceView({ store }: MyBalanceViewProps) {
                                     'max-w-[56px] truncate text-[11px] font-medium leading-tight',
                                     selected ? 'text-indigo-700 dark:text-indigo-300' : 'text-muted-foreground',
                                 )}>
-                                    {m.name}
+                                    {m.id === myMemberIdProp ? 'You' : m.name}
                                 </span>
                             </button>
                         );

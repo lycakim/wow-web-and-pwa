@@ -18,6 +18,7 @@ interface ExpensesViewProps {
     onAdd: (expense: Omit<Expense, 'id' | 'createdAt'>) => void;
     onRemove: (id: string) => void;
     currentUserName?: string;
+    myMemberId?: string;
 }
 
 function formatPeso(amount: number): string {
@@ -347,7 +348,7 @@ const SPLIT_BADGE: Record<string, { label: string; className: string }> = {
     kkb: { label: 'KKB', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
 };
 
-export function ExpensesView({ store, onAdd, onRemove, currentUserName }: ExpensesViewProps) {
+export function ExpensesView({ store, onAdd, onRemove, currentUserName, myMemberId }: ExpensesViewProps) {
     const [isAdding, setIsAdding] = useState(false);
     const [filter, setFilter] = useState<Category | 'all'>('all');
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; description: string } | null>(null);
@@ -460,7 +461,7 @@ export function ExpensesView({ store, onAdd, onRemove, currentUserName }: Expens
                                                 {/* Row 4: payer + date */}
                                                 <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
                                                     {expense.splitType !== 'kkb' && (
-                                                        <span>Paid by <span className="font-medium text-foreground">{payer?.name ?? 'Unknown'}</span></span>
+                                                        <span>Paid by <span className="font-medium text-foreground">{expense.paidById === myMemberId ? 'You' : (payer?.name ?? 'Unknown')}</span></span>
                                                     )}
                                                     {expense.splitType !== 'kkb' && <span>·</span>}
                                                     <span>{formatDate(expense.createdAt)}</span>
@@ -509,7 +510,7 @@ export function ExpensesView({ store, onAdd, onRemove, currentUserName }: Expens
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-muted-foreground">
-                                                        {expense.splitType === 'kkb' ? '—' : (payer?.name ?? 'Unknown')}
+                                                        {expense.splitType === 'kkb' ? '—' : (expense.paidById === myMemberId ? 'You' : (payer?.name ?? 'Unknown'))}
                                                     </TableCell>
                                                     <TableCell className="text-muted-foreground">
                                                         {expense.loggedByName

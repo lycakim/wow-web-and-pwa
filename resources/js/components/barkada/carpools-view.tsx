@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react';
 interface CarpoolsViewProps {
     members: Member[];
     carpools: Carpool[];
+    myMemberId?: string;
     onAdd: (name: string, memberIds: string[]) => void;
     onUpdate: (id: string, name: string, memberIds: string[]) => void;
     onRemove: (id: string) => void;
@@ -194,7 +195,7 @@ function DeleteDialog({
     );
 }
 
-export function CarpoolsView({ members, carpools, onAdd, onUpdate, onRemove }: CarpoolsViewProps) {
+export function CarpoolsView({ members, carpools, myMemberId, onAdd, onUpdate, onRemove }: CarpoolsViewProps) {
     const [addOpen, setAddOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<Carpool | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Carpool | null>(null);
@@ -263,7 +264,7 @@ export function CarpoolsView({ members, carpools, onAdd, onUpdate, onRemove }: C
                                                     </div>
                                                     <span className="text-sm text-muted-foreground">
                                                         {carpool.memberIds
-                                                            .map((mid) => memberById[mid]?.name)
+                                                            .map((mid) => mid === myMemberId ? 'You' : memberById[mid]?.name)
                                                             .filter(Boolean)
                                                             .join(', ')}
                                                     </span>
