@@ -44,7 +44,8 @@ import {
 import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
-import { ArrowLeftRight, Bell, BellOff, Car, Check, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Vault, Wallet } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArrowLeftRight, Bell, BellOff, Car, Check, ChevronDown, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Vault, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -307,14 +308,32 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                 </SidebarHeader>
 
                 <SidebarContent>
-                    <SidebarGroup className="px-2 py-0">
-                        <SidebarGroupLabel>Main</SidebarGroupLabel>
-                        <NavGroup items={MAIN_NAV} view={view} onNav={setView} />
-                    </SidebarGroup>
-                    <SidebarGroup className="px-2 py-0">
-                        <SidebarGroupLabel>Setup</SidebarGroupLabel>
-                        <NavGroup items={SETUP_NAV} view={view} onNav={setView} />
-                    </SidebarGroup>
+                    <Collapsible defaultOpen className="group/collapsible">
+                        <SidebarGroup className="px-2 py-0">
+                            <SidebarGroupLabel asChild>
+                                <CollapsibleTrigger className="flex w-full items-center justify-between">
+                                    Main
+                                    <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                                </CollapsibleTrigger>
+                            </SidebarGroupLabel>
+                            <CollapsibleContent>
+                                <NavGroup items={MAIN_NAV} view={view} onNav={setView} />
+                            </CollapsibleContent>
+                        </SidebarGroup>
+                    </Collapsible>
+                    <Collapsible defaultOpen className="group/collapsible">
+                        <SidebarGroup className="px-2 py-0">
+                            <SidebarGroupLabel asChild>
+                                <CollapsibleTrigger className="flex w-full items-center justify-between">
+                                    Setup
+                                    <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                                </CollapsibleTrigger>
+                            </SidebarGroupLabel>
+                            <CollapsibleContent>
+                                <NavGroup items={SETUP_NAV} view={view} onNav={setView} />
+                            </CollapsibleContent>
+                        </SidebarGroup>
+                    </Collapsible>
                 </SidebarContent>
 
                 <SidebarFooter>
