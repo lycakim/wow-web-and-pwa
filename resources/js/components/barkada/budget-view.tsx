@@ -185,7 +185,10 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
     const totalBudget = getTotalBudget(activeBudgetItems);
     const totalSpend = getTotalSpend(activeExpenses);
     const totalRemaining = totalBudget - totalSpend;
-    const bufferedBudget = totalBudget * (1 + budgetBuffer / 100) + (contingency ?? 0);
+    const bufferAmount = totalBudget * (budgetBuffer / 100);
+    const contingencyAmount = totalBudget * ((contingency ?? 0) / 100);
+    const grandTotal = totalBudget + bufferAmount + contingencyAmount;
+    const memberCount = store.members.length;
 
     return (
         <>
@@ -280,17 +283,33 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
 
                     {budgetItems.length > 0 && (
                         <CardFooter className="flex flex-col gap-0 px-0 pb-0">
-                            <div className="w-full border-t px-6 py-3">
-                                <div className="flex items-center justify-between text-sm font-semibold">
-                                    <span>Total Budget</span>
-                                    <span className="tabular-nums">{formatPeso(totalBudget)}</span>
+                            <div className="w-full border-t px-6 py-4 space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Total</span>
+                                    <span className="tabular-nums font-medium">{formatPeso(totalBudget)}</span>
                                 </div>
                                 {budgetBuffer > 0 && (
-                                    <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                                        <span>+ {budgetBuffer}% buffer</span>
-                                        <span className="tabular-nums">{formatPeso(bufferedBudget)}</span>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">+{budgetBuffer}% buffer</span>
+                                        <span className="tabular-nums text-muted-foreground">
+                                            {memberCount > 0 ? `${formatPeso(bufferAmount / memberCount)}/person` : formatPeso(bufferAmount)}
+                                        </span>
                                     </div>
                                 )}
+                                {(contingency ?? 0) > 0 && (
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">+{contingency}% contingency</span>
+                                        <span className="tabular-nums text-muted-foreground">
+                                            {memberCount > 0 ? `${formatPeso(contingencyAmount / memberCount)}/person` : formatPeso(contingencyAmount)}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="flex items-center justify-between border-t pt-2 text-sm font-bold">
+                                    <span>Grand total</span>
+                                    <span className="tabular-nums text-indigo-600 dark:text-indigo-400">
+                                        {memberCount > 0 ? `${formatPeso(grandTotal / memberCount)}/person` : formatPeso(grandTotal)}
+                                    </span>
+                                </div>
                             </div>
                         </CardFooter>
                     )}
@@ -361,8 +380,6 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                 {/* Cost breakdown by member/group */}
                 {store.members.length > 0 && totalBudget > 0 && (() => {
                     const { members, carpools } = store;
-                    const bufferMultiplier = budgetBuffer > 0 ? (1 + budgetBuffer / 100) : 1;
-                    const contingencyPerPerson = members.length > 0 ? (contingency ?? 0) / members.length : 0;
                     const memberById = Object.fromEntries(members.map((m) => [m.id, m]));
                     const carpooledIds = new Set(carpools.flatMap((c) => c.memberIds));
                     const ungroupedMembers = members.filter((m) => !carpooledIds.has(m.id));
@@ -372,11 +389,12 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                         colorIndex: i % GROUP_COLORS.length,
                     }));
                     const hasCarpoolItems = activeBudgetItems.some((item) => item.carpoolId);
+                    const totalRate = 1 + (budgetBuffer + (contingency ?? 0)) / 100;
 
                     const getMemberShare = (memberId: string) =>
-                        calculateMemberBudgetShare(memberId, activeBudgetItems, carpools, members.length) * bufferMultiplier + contingencyPerPerson;
+                        calculateMemberBudgetShare(memberId, activeBudgetItems, carpools, members.length) * totalRate;
 
-                    const grandTotal = members.reduce((s, m) => s + getMemberShare(m.id), 0);
+                    const tableGrandTotal = members.reduce((s, m) => s + getMemberShare(m.id), 0);
 
                     return (
                         <Card>
@@ -453,7 +471,7 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                                         <TableRow>
                                             <TableCell className="pl-6" />
                                             <TableCell className="font-semibold">Total ({members.length} members)</TableCell>
-                                            <TableCell className="pr-6 text-right font-semibold tabular-nums">{formatPeso(grandTotal)}</TableCell>
+                                            <TableCell className="pr-6 text-right font-semibold tabular-nums">{formatPeso(tableGrandTotal)}</TableCell>
                                         </TableRow>
                                     </TableFooter>
                                 </Table>
@@ -496,13 +514,13 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                         </div>
 
                         <div className="border-t pt-4 flex flex-col gap-1.5">
-                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Contingency Fund</span>
-                            <p className="text-xs text-muted-foreground">A fixed ₱ amount set aside for emergencies, split equally among all members.</p>
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Contingency</span>
+                            <p className="text-xs text-muted-foreground">A % added on top of each budget item for emergencies (e.g. 2% on ₱1,000 → +₱20/person).</p>
                             <div className="flex items-center gap-3">
-                                <span className="text-sm text-muted-foreground">₱</span>
                                 <Input
                                     type="number"
                                     min="0"
+                                    max="100"
                                     step="1"
                                     value={contingency || ''}
                                     onChange={(e) => {
@@ -510,22 +528,16 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                                         onSetContingency(isNaN(val) ? 0 : val);
                                     }}
                                     placeholder="0"
-                                    className="w-32 text-right"
+                                    className="w-24 text-right"
                                 />
-                                {(contingency ?? 0) > 0 && store.members.length > 0 && (
+                                <span className="text-sm text-muted-foreground">%</span>
+                                {totalBudget > 0 && (contingency ?? 0) > 0 && memberCount > 0 && (
                                     <span className="text-sm text-muted-foreground">
-                                        → <span className="font-semibold text-foreground">{formatPeso(contingency / store.members.length)}</span>/person
+                                        → <span className="font-semibold text-foreground">{formatPeso(totalBudget * (contingency / 100) / memberCount)}</span>/person
                                     </span>
                                 )}
                             </div>
                         </div>
-
-                        {totalBudget > 0 && ((budgetBuffer > 0) || (contingency ?? 0) > 0) && (
-                            <div className="border-t pt-3 flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Total with padding</span>
-                                <span className="font-semibold">{formatPeso(bufferedBudget)}</span>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
             </div>

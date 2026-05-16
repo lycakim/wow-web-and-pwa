@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { BarkadaStore, Member } from '@/types/barkada';
 import { calculateMemberBudgetShare, getActiveBudgetItems, getAllCategories } from '@/types/barkada';
-import { getTotalBudget } from '@/hooks/use-barkada-store';
 import { ArrowRight, Plus, Trash2, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -128,12 +127,11 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
         }
     }
 
-    // Buffer & contingency share
-    const baseBudget = getTotalBudget(activeBudgetItems);
-    const withBuffer = store.budgetBuffer > 0 ? baseBudget * (store.budgetBuffer / 100) : 0;
+    // Buffer & contingency — both % of this member's own carpool-aware share
+    const budgetBuffer = store.budgetBuffer ?? 0;
     const contingency = store.contingency ?? 0;
-    const myBufferShare = members.length > 0 ? withBuffer / members.length : 0;
-    const myContingencyShare = members.length > 0 ? contingency / members.length : 0;
+    const myBufferShare = myBudgetShare * (budgetBuffer / 100);
+    const myContingencyShare = myBudgetShare * (contingency / 100);
     const myTotalShare = myBudgetShare + myBufferShare + myContingencyShare;
 
     // Still need to bring (uses full share including buffer + contingency)
@@ -141,9 +139,9 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
     const overpaid = myTotalAdvance > myTotalShare;
 
     // All members summary
+    const totalRate = 1 + (budgetBuffer + contingency) / 100;
     const memberSummaries = members.map((m) => {
-        const share = calculateMemberBudgetShare(m.id, activeBudgetItems, carpools, members.length)
-            + (members.length > 0 ? (withBuffer + contingency) / members.length : 0);
+        const share = calculateMemberBudgetShare(m.id, activeBudgetItems, carpools, members.length) * totalRate;
         const advance = collectionPayments.filter((p) => p.fromMemberId === m.id).reduce((s, p) => s + p.amount, 0)
             + memberPayments.filter((p) => p.memberId === m.id).reduce((s, p) => s + p.amount, 0);
         return { member: m, share, advance, remaining: Math.max(0, share - advance) };
@@ -330,13 +328,13 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
                                 ))}
                                 {myBufferShare > 0 && (
                                     <div className="flex items-center justify-between px-4 py-2.5 text-muted-foreground">
-                                        <span className="text-sm">Buffer ({store.budgetBuffer}%)</span>
+                                        <span className="text-sm">+{budgetBuffer}% buffer</span>
                                         <span className="text-sm tabular-nums">+{formatPeso(myBufferShare)}</span>
                                     </div>
                                 )}
                                 {myContingencyShare > 0 && (
                                     <div className="flex items-center justify-between px-4 py-2.5 text-muted-foreground">
-                                        <span className="text-sm">Contingency</span>
+                                        <span className="text-sm">+{contingency}% contingency</span>
                                         <span className="text-sm tabular-nums">+{formatPeso(myContingencyShare)}</span>
                                     </div>
                                 )}
