@@ -322,7 +322,7 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
 
                     {/* ── Row 1: Balance Due + Budget Status ── */}
                     {(me && myBudgetShare > 0 || totalBudget > 0) && (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className={cn('grid grid-cols-1 gap-4', (me && myBudgetShare > 0) && totalBudget > 0 && 'sm:grid-cols-2')}>
                             {me && myBudgetShare > 0 && (
                                 <button type="button" onClick={() => onNavigate('mybalance')} className="w-full text-left">
                                     <div className={cn(
@@ -401,7 +401,7 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
 
                     {/* ── Row 2: Expense Distribution + Collections ── */}
                     {(chartData.length > 0 || collections.length > 0) && (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className={cn('grid grid-cols-1 gap-4', chartData.length > 0 && collections.length > 0 && 'sm:grid-cols-2')}>
                             {chartData.length > 0 && (
                                 <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
@@ -499,7 +499,7 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
 
                     {/* ── Row 3: Member Balances + Recent Activity ── */}
                     {(members.length > 0 && activeBudgetItems.length > 0 || recentExpenses.length > 0) && (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className={cn('grid grid-cols-1 gap-4', (members.length > 0 && activeBudgetItems.length > 0) && recentExpenses.length > 0 && 'sm:grid-cols-2')}>
                             {members.length > 0 && activeBudgetItems.length > 0 && (
                                 <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
