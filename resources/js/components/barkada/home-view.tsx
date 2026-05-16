@@ -320,12 +320,9 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                         ))}
                     </div>
 
-                    {/* ── Main + Sidebar layout ── */}
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-
-                        {/* ── Main column (2/3 on lg) ── */}
-                        <div className="space-y-4 lg:col-span-2">
-                            {/* Your Balance Due */}
+                    {/* ── Row 1: Balance Due + Budget Status ── */}
+                    {(me && myBudgetShare > 0 || totalBudget > 0) && (
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             {me && myBudgetShare > 0 && (
                                 <button type="button" onClick={() => onNavigate('mybalance')} className="w-full text-left">
                                     <div className={cn(
@@ -356,7 +353,55 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                 </button>
                             )}
 
-                            {/* Expense Distribution */}
+                            {totalBudget > 0 && (
+                                <button type="button" onClick={() => onNavigate('budget')} className="w-full text-left">
+                                    <Card className="h-full gap-0 py-0 transition-colors hover:bg-muted/40">
+                                        <CardContent className="flex h-full flex-col justify-between p-5">
+                                            <div>
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Budget Status</p>
+                                                <div className="mt-3 flex items-center gap-4">
+                                                    <div className="relative shrink-0">
+                                                        <RingProgress
+                                                            pct={budgetPct}
+                                                            size={72}
+                                                            strokeWidth={7}
+                                                            color={isOverBudget ? '#ef4444' : '#6366f1'}
+                                                        />
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                            <span className={cn('text-xs font-bold tabular-nums', isOverBudget ? 'text-destructive' : 'text-indigo-600 dark:text-indigo-400')}>
+                                                                {Math.round(budgetPct)}%
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="min-w-0 flex-1 space-y-1.5">
+                                                        <div>
+                                                            <p className="text-[10px] text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</p>
+                                                            <p className={cn('text-base font-bold tabular-nums leading-tight', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+                                                                {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] text-muted-foreground">Total budget</p>
+                                                            <p className="text-sm font-semibold tabular-nums">{formatPeso(totalBudget)}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {perPersonRemaining !== null && members.length > 1 && (
+                                                <p className="mt-3 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+                                                    ≈ {formatPeso(perPersonRemaining)} per person remaining
+                                                </p>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Row 2: Expense Distribution + Collections ── */}
+                    {(chartData.length > 0 || collections.length > 0) && (
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             {chartData.length > 0 && (
                                 <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
@@ -404,56 +449,7 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                     </CardContent>
                                 </Card>
                             )}
-                        </div>
 
-                        {/* ── Sidebar (1/3 on lg) ── */}
-                        <div className="space-y-4">
-                            {/* Budget Status */}
-                            {totalBudget > 0 && (
-                                <button type="button" onClick={() => onNavigate('budget')} className="w-full text-left">
-                                    <Card className="h-full gap-0 py-0 transition-colors hover:bg-muted/40">
-                                        <CardContent className="flex h-full flex-col justify-between p-5">
-                                            <div>
-                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Budget Status</p>
-                                                <div className="mt-3 flex items-center gap-4">
-                                                    <div className="relative shrink-0">
-                                                        <RingProgress
-                                                            pct={budgetPct}
-                                                            size={72}
-                                                            strokeWidth={7}
-                                                            color={isOverBudget ? '#ef4444' : '#6366f1'}
-                                                        />
-                                                        <div className="absolute inset-0 flex items-center justify-center">
-                                                            <span className={cn('text-xs font-bold tabular-nums', isOverBudget ? 'text-destructive' : 'text-indigo-600 dark:text-indigo-400')}>
-                                                                {Math.round(budgetPct)}%
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="min-w-0 flex-1 space-y-1.5">
-                                                        <div>
-                                                            <p className="text-[10px] text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</p>
-                                                            <p className={cn('text-base font-bold tabular-nums leading-tight', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
-                                                                {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[10px] text-muted-foreground">Total budget</p>
-                                                            <p className="text-sm font-semibold tabular-nums">{formatPeso(totalBudget)}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {perPersonRemaining !== null && members.length > 1 && (
-                                                <p className="mt-3 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
-                                                    ≈ {formatPeso(perPersonRemaining)} per person remaining
-                                                </p>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                </button>
-                            )}
-
-                            {/* Collections */}
                             {collections.length > 0 && (
                                 <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
@@ -498,8 +494,12 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                     </CardContent>
                                 </Card>
                             )}
+                        </div>
+                    )}
 
-                            {/* Member Balances — capped to 5 */}
+                    {/* ── Row 3: Member Balances + Recent Activity ── */}
+                    {(members.length > 0 && activeBudgetItems.length > 0 || recentExpenses.length > 0) && (
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             {members.length > 0 && activeBudgetItems.length > 0 && (
                                 <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
@@ -571,7 +571,6 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                 </Card>
                             )}
 
-                            {/* Recent Activity */}
                             {recentExpenses.length > 0 && (
                                 <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
@@ -606,10 +605,8 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                     </CardContent>
                                 </Card>
                             )}
-
                         </div>
-
-                    </div>{/* end main+sidebar grid */}
+                    )}
                 </>
             )}
         </div>
