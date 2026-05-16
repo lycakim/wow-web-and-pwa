@@ -30,6 +30,21 @@ function progressColorToHex(cls: string): string {
     return PROGRESS_COLOR_HEX[cls] ?? '#6366f1';
 }
 
+function RingProgress({ pct, size = 72, strokeWidth = 7, color = '#6366f1' }: {
+    pct: number; size?: number; strokeWidth?: number; color?: string;
+}) {
+    const r = (size - strokeWidth) / 2;
+    const circ = 2 * Math.PI * r;
+    const filled = Math.min(pct / 100, 1) * circ;
+    return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={strokeWidth} className="text-foreground/10" />
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={strokeWidth}
+                strokeDasharray={`${filled} ${circ - filled}`} strokeLinecap="round" />
+        </svg>
+    );
+}
+
 const MY_MEMBER_KEY = 'barkada-my-member-id';
 
 const AVATAR_COLORS = [
@@ -91,7 +106,7 @@ interface HomeViewProps {
     store: BarkadaStore;
     myMemberId?: string;
     onUpdateTrip: (trip: Trip) => void;
-    onNavigate: (view: View) => void;
+    onNavigate?: (view: View) => void;
 }
 
 function TripEditForm({ trip, onSave, onCancel }: { trip: Trip; onSave: (t: Trip) => void; onCancel: () => void }) {
@@ -124,7 +139,7 @@ function TripEditForm({ trip, onSave, onCancel }: { trip: Trip; onSave: (t: Trip
     );
 }
 
-export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNavigate }: HomeViewProps) {
+export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNavigate = () => {} }: HomeViewProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [myMemberId, setMyMemberId] = useState('');
 
@@ -183,6 +198,8 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
             return meta ? { name: meta.shortLabel, amount, color: progressColorToHex(meta.progressColorClass), icon: meta.icon } : null;
         })
         .filter(Boolean) as { name: string; amount: number; color: string; icon: string }[];
+
+    const totalSettlementsAmount = settlements.reduce((s, x) => s + x.amount, 0);
 
     // Member balance summaries
     const memberBalanceSummaries = members.map((m) => {
@@ -265,16 +282,40 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                     {/* ── Stat cards ── */}
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                         {([
-                            { icon: Users, label: 'Members', value: members.length, sub: 'Active participants', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/30' },
-                            { icon: ReceiptText, label: 'Expenses Logged', value: activeExpenses.length, sub: 'Total transactions', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/30' },
-                            { icon: Vault, label: 'Collections', value: activeCollections.length, sub: 'Funds gathered', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-950/30' },
-                            { icon: HandCoins, label: 'Settlements', value: settlements.length, sub: 'Payments needed', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/30' },
-                        ] as const).map(({ icon: Icon, label, value, sub, color, bg }) => (
+                            {
+                                icon: Users, label: 'Members', value: members.length,
+                                sub: members.length === 1 ? 'participant' : 'participants',
+                                mono: null,
+                                color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/30',
+                            },
+                            {
+                                icon: ReceiptText, label: 'Expenses', value: activeExpenses.length,
+                                sub: activeExpenses.length === 1 ? 'transaction' : 'transactions',
+                                mono: totalSpend > 0 ? formatPeso(totalSpend) : null,
+                                color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/30',
+                            },
+                            {
+                                icon: Vault, label: 'Collections', value: collections.length,
+                                sub: collections.length === 1 ? 'fund' : 'funds',
+                                mono: totalCollectionTarget > 0 ? `${formatPeso(totalCollected)} raised` : null,
+                                color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-950/30',
+                            },
+                            {
+                                icon: HandCoins, label: 'Settlements', value: settlements.length,
+                                sub: settlements.length === 1 ? 'payment needed' : 'payments needed',
+                                mono: totalSettlementsAmount > 0 ? formatPeso(totalSettlementsAmount) : (settlements.length === 0 ? 'All settled!' : null),
+                                color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/30',
+                            },
+                        ]).map(({ icon: Icon, label, value, sub, mono, color, bg }) => (
                             <div key={label} className={cn('rounded-2xl p-4', bg)}>
                                 <Icon className={cn('mb-2 size-4', color)} />
                                 <p className={cn('text-2xl font-bold tabular-nums', color)}>{value}</p>
                                 <p className="mt-0.5 text-[11px] font-semibold text-foreground/70">{label}</p>
-                                <p className="text-[10px] text-muted-foreground">{sub}</p>
+                                {mono ? (
+                                    <p className={cn('truncate text-[10px] font-semibold tabular-nums', color)}>{mono}</p>
+                                ) : (
+                                    <p className="text-[10px] text-muted-foreground">{sub}</p>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -320,23 +361,33 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                         <CardContent className="flex h-full flex-col justify-between p-5">
                                             <div>
                                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Budget Status</p>
-                                                <div className="mt-3 flex items-center justify-between text-sm">
-                                                    <span className="text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</span>
-                                                    <span className={cn('font-bold tabular-nums', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
-                                                        {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
-                                                    </span>
+                                                <div className="mt-3 flex items-center gap-4">
+                                                    <div className="relative shrink-0">
+                                                        <RingProgress
+                                                            pct={budgetPct}
+                                                            size={72}
+                                                            strokeWidth={7}
+                                                            color={isOverBudget ? '#ef4444' : '#6366f1'}
+                                                        />
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                            <span className={cn('text-xs font-bold tabular-nums', isOverBudget ? 'text-destructive' : 'text-indigo-600 dark:text-indigo-400')}>
+                                                                {Math.round(budgetPct)}%
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="min-w-0 flex-1 space-y-1.5">
+                                                        <div>
+                                                            <p className="text-[10px] text-muted-foreground">{isOverBudget ? 'Over budget' : 'Remaining'}</p>
+                                                            <p className={cn('text-base font-bold tabular-nums leading-tight', isOverBudget ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+                                                                {isOverBudget ? '−' : ''}{formatPeso(Math.abs(remaining))}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] text-muted-foreground">Total budget</p>
+                                                            <p className="text-sm font-semibold tabular-nums">{formatPeso(totalBudget)}</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                                                    <span>Total budget</span>
-                                                    <span className="tabular-nums">{formatPeso(totalBudget)}</span>
-                                                </div>
-                                                <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                                                    <div
-                                                        className={cn('h-full rounded-full transition-all', isOverBudget ? 'bg-destructive' : 'bg-indigo-500')}
-                                                        style={{ width: `${budgetPct}%` }}
-                                                    />
-                                                </div>
-                                                <p className="mt-1.5 text-[11px] text-muted-foreground">Budget Used: {Math.round(budgetPct)}%</p>
                                             </div>
                                             {perPersonRemaining !== null && members.length > 1 && (
                                                 <p className="mt-3 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
@@ -356,8 +407,18 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                             {chartData.length > 0 && (
                                 <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
-                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Expense Distribution</p>
-                                        <p className="mb-3 text-[11px] text-muted-foreground">Breakdown by category</p>
+                                        <div className="mb-3 flex items-start justify-between">
+                                            <div>
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Expense Distribution</p>
+                                                <p className="text-[11px] text-muted-foreground">By category</p>
+                                            </div>
+                                            {totalSpend > 0 && (
+                                                <div className="text-right">
+                                                    <p className="text-[10px] text-muted-foreground">Total spent</p>
+                                                    <p className="text-sm font-bold tabular-nums text-foreground">{formatPeso(totalSpend)}</p>
+                                                </div>
+                                            )}
+                                        </div>
                                         <ResponsiveContainer width="100%" height={160}>
                                             <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barCategoryGap="28%">
                                                 <XAxis
@@ -453,34 +514,45 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                                 const isMe = member.id === myMemberId;
                                                 const isSettled = memberRemaining <= 0.005;
                                                 const isOverpaid = advance > share + 0.005;
+                                                const paidPct = share > 0 ? Math.min(100, (advance / share) * 100) : 0;
                                                 return (
-                                                    <div key={member.id} className={cn('flex items-center gap-3 rounded-xl px-3 py-2', isMe && 'bg-indigo-50 dark:bg-indigo-950/20')}>
-                                                        <span className={cn(
-                                                            'inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white',
-                                                            avatarColor(members, member.id),
-                                                        )}>
-                                                            {getInitials(member.name)}
-                                                        </span>
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="truncate text-sm font-medium">
-                                                                {member.name}
-                                                                {isMe && <span className="ml-1.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">YOU</span>}
-                                                            </p>
-                                                        </div>
-                                                        {isSettled ? (
+                                                    <div key={member.id} className={cn('rounded-xl px-3 py-2', isMe && 'bg-indigo-50 dark:bg-indigo-950/20')}>
+                                                        <div className="flex items-center gap-3">
                                                             <span className={cn(
-                                                                'rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-                                                                isOverpaid
-                                                                    ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400'
-                                                                    : 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400',
+                                                                'inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white',
+                                                                avatarColor(members, member.id),
                                                             )}>
-                                                                {isOverpaid ? 'Overpaid' : 'Paid'}
+                                                                {getInitials(member.name)}
                                                             </span>
-                                                        ) : (
-                                                            <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[11px] font-bold tabular-nums text-red-600 dark:bg-red-950/40 dark:text-red-400">
-                                                                −{formatPeso(memberRemaining)}
-                                                            </span>
-                                                        )}
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="truncate text-sm font-medium">
+                                                                    {member.name}
+                                                                    {isMe && <span className="ml-1.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">YOU</span>}
+                                                                </p>
+                                                                {share > 0 && (
+                                                                    <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-foreground/10">
+                                                                        <div
+                                                                            className={cn('h-full rounded-full transition-all', isSettled ? (isOverpaid ? 'bg-violet-500' : 'bg-green-500') : 'bg-indigo-500')}
+                                                                            style={{ width: `${paidPct}%` }}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {isSettled ? (
+                                                                <span className={cn(
+                                                                    'shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                                                                    isOverpaid
+                                                                        ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400'
+                                                                        : 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400',
+                                                                )}>
+                                                                    {isOverpaid ? 'Overpaid' : 'Paid'}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="shrink-0 rounded-full bg-red-100 px-2.5 py-0.5 text-[11px] font-bold tabular-nums text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                                                                    −{formatPeso(memberRemaining)}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 );
                                             })}
