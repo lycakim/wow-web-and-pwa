@@ -45,7 +45,7 @@ import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, ArrowLeftRight, Bell, BellOff, Car, Check, ChevronDown, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Vault, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Bell, BellOff, Car, Check, ChevronDown, ClipboardList, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -58,7 +58,7 @@ const MAIN_NAV: NavItem[] = [
     { view: 'home', label: 'Home', icon: Home },
     { view: 'mybalance', label: 'My Balance', icon: ArrowLeftRight },
     { view: 'expenses', label: 'Expenses', icon: ReceiptText },
-    { view: 'collections', label: 'Collections', icon: Vault },
+    { view: 'collections', label: 'Payment Status', icon: ClipboardList },
     { view: 'grocery', label: 'Grocery', icon: ShoppingCart },
     { view: 'settlement', label: 'Settlement', icon: HandCoins },
 ];
@@ -79,7 +79,7 @@ const VIEW_LABELS: Record<View, string> = {
     categories: 'Categories',
     carpools: 'Carpools',
     grocery: 'Grocery',
-    collections: 'Collections',
+    collections: 'Payment Status',
     mybalance: 'My Balance',
 };
 
@@ -535,15 +535,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                                 />
                             )}
                             {view === 'collections' && (
-                                <CollectionsView
-                                    store={store}
-                                    currentUserName={currentUserName || undefined}
-                                    myMemberId={myMemberId ?? undefined}
-                                    onAddCollection={addCollection}
-                                    onRemoveCollection={removeCollection}
-                                    onAddPayment={addCollectionPayment}
-                                    onRemovePayment={removeCollectionPayment}
-                                />
+                                <CollectionsView store={store} myMemberId={myMemberId ?? undefined} />
                             )}
                             {view === 'mybalance' && (
                                 <MyBalanceView store={store} myMemberId={myMemberId ?? undefined} onAddMemberPayment={addMemberPayment} onRemoveMemberPayment={removeMemberPayment} />

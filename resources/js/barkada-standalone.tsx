@@ -49,7 +49,7 @@ const VIEW_LABELS: Record<View, string> = {
     categories: 'Categories',
     carpools: 'Carpools',
     grocery: 'Grocery',
-    collections: 'Collections',
+    collections: 'Payment Status',
     mybalance: 'My Balance',
 };
 
