@@ -127,11 +127,14 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
         }
     }
 
-    // Buffer & contingency — both % of this member's own carpool-aware share
+    // Buffer & contingency — only applied to "All" split items (no carpoolId)
     const budgetBuffer = store.budgetBuffer ?? 0;
     const contingency = store.contingency ?? 0;
-    const myBufferShare = myBudgetShare * (budgetBuffer / 100);
-    const myContingencyShare = myBudgetShare * (contingency / 100);
+    const myAllItemsShare = me
+        ? calculateMemberBudgetShare(myMemberId, activeBudgetItems.filter((i) => !i.carpoolId), carpools, members.length)
+        : 0;
+    const myBufferShare = myAllItemsShare * (budgetBuffer / 100);
+    const myContingencyShare = myAllItemsShare * (contingency / 100);
     const myTotalShare = myBudgetShare + myBufferShare + myContingencyShare;
 
     // Still need to bring (uses full share including buffer + contingency)
@@ -139,9 +142,11 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
     const overpaid = myTotalAdvance - myTotalShare > 0.005;
 
     // All members summary
-    const totalRate = 1 + (budgetBuffer + contingency) / 100;
+    const bufferContingencyRate = (budgetBuffer + contingency) / 100;
     const memberSummaries = members.map((m) => {
-        const share = calculateMemberBudgetShare(m.id, activeBudgetItems, carpools, members.length) * totalRate;
+        const allShare = calculateMemberBudgetShare(m.id, activeBudgetItems.filter((i) => !i.carpoolId), carpools, members.length);
+        const carpoolShare = calculateMemberBudgetShare(m.id, activeBudgetItems.filter((i) => !!i.carpoolId), carpools, members.length);
+        const share = allShare * (1 + bufferContingencyRate) + carpoolShare;
         const advance = collectionPayments.filter((p) => p.fromMemberId === m.id).reduce((s, p) => s + p.amount, 0)
             + memberPayments.filter((p) => p.memberId === m.id).reduce((s, p) => s + p.amount, 0);
         return { member: m, share, advance, remaining: Math.max(0, share - advance) };

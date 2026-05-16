@@ -185,8 +185,10 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
     const totalBudget = getTotalBudget(activeBudgetItems);
     const totalSpend = getTotalSpend(activeExpenses);
     const totalRemaining = totalBudget - totalSpend;
-    const bufferAmount = totalBudget * (budgetBuffer / 100);
-    const contingencyAmount = totalBudget * ((contingency ?? 0) / 100);
+    // Buffer and contingency only apply to "All" split items (no carpoolId)
+    const allItemsBudget = activeBudgetItems.filter((i) => !i.carpoolId).reduce((s, i) => s + i.amount, 0);
+    const bufferAmount = allItemsBudget * (budgetBuffer / 100);
+    const contingencyAmount = allItemsBudget * ((contingency ?? 0) / 100);
     const grandTotal = totalBudget + bufferAmount + contingencyAmount;
     const memberCount = store.members.length;
 
@@ -389,10 +391,15 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                         colorIndex: i % GROUP_COLORS.length,
                     }));
                     const hasCarpoolItems = activeBudgetItems.some((item) => item.carpoolId);
-                    const totalRate = 1 + (budgetBuffer + (contingency ?? 0)) / 100;
+                    const allOnlyItems = activeBudgetItems.filter((i) => !i.carpoolId);
+                    const carpoolOnlyItems = activeBudgetItems.filter((i) => !!i.carpoolId);
+                    const bufferContingencyRate = (budgetBuffer + (contingency ?? 0)) / 100;
 
-                    const getMemberShare = (memberId: string) =>
-                        calculateMemberBudgetShare(memberId, activeBudgetItems, carpools, members.length) * totalRate;
+                    const getMemberShare = (memberId: string) => {
+                        const allShare = calculateMemberBudgetShare(memberId, allOnlyItems, carpools, members.length);
+                        const carpoolShare = calculateMemberBudgetShare(memberId, carpoolOnlyItems, carpools, members.length);
+                        return allShare * (1 + bufferContingencyRate) + carpoolShare;
+                    };
 
                     const tableGrandTotal = members.reduce((s, m) => s + getMemberShare(m.id), 0);
 

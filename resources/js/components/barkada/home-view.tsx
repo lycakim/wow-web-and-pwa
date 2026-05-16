@@ -175,11 +175,15 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
     }, [members, myMemberIdProp]);
 
     const me = members.find((m) => m.id === myMemberId);
-    const bufferContingencyShare = members.length > 0
-        ? totalBudget * ((store.budgetBuffer ?? 0) + (store.contingency ?? 0)) / 100 / members.length
-        : 0;
+    const allOnlyItems = activeBudgetItems.filter((i) => !i.carpoolId);
+    const carpoolOnlyItems = activeBudgetItems.filter((i) => !!i.carpoolId);
+    const bufferContingencyRate = ((store.budgetBuffer ?? 0) + (store.contingency ?? 0)) / 100;
     const myBudgetShare = me
-        ? calculateMemberBudgetShare(myMemberId, activeBudgetItems, carpools, members.length) + bufferContingencyShare
+        ? (() => {
+            const allShare = calculateMemberBudgetShare(myMemberId, allOnlyItems, carpools, members.length);
+            const carpoolShare = calculateMemberBudgetShare(myMemberId, carpoolOnlyItems, carpools, members.length);
+            return allShare * (1 + bufferContingencyRate) + carpoolShare;
+        })()
         : 0;
     const myAdvancePaid = collectionPayments.filter((p) => p.fromMemberId === myMemberId).reduce((s, p) => s + p.amount, 0)
         + memberPayments.filter((p) => p.memberId === myMemberId).reduce((s, p) => s + p.amount, 0);
@@ -204,7 +208,9 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
 
     // Member balance summaries
     const memberBalanceSummaries = members.map((m) => {
-        const share = calculateMemberBudgetShare(m.id, activeBudgetItems, carpools, members.length) + bufferContingencyShare;
+        const allShare = calculateMemberBudgetShare(m.id, allOnlyItems, carpools, members.length);
+        const carpoolShare = calculateMemberBudgetShare(m.id, carpoolOnlyItems, carpools, members.length);
+        const share = allShare * (1 + bufferContingencyRate) + carpoolShare;
         const advance = collectionPayments.filter((p) => p.fromMemberId === m.id).reduce((s, p) => s + p.amount, 0)
             + memberPayments.filter((p) => p.memberId === m.id).reduce((s, p) => s + p.amount, 0);
         return { member: m, share, advance, remaining: share - advance };
