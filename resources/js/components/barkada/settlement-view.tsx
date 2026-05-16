@@ -1,17 +1,24 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import { calculateSettlements, getSpendByCategory, getTotalSpend } from '@/hooks/use-barkada-store';
 import { cn } from '@/lib/utils';
-import type { BarkadaStore, Member } from '@/types/barkada';
+import type { BarkadaStore, Member, Settlement } from '@/types/barkada';
 import { getActiveExpenses, getAllCategories, getAllCategoryKeys } from '@/types/barkada';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
 interface SettlementViewProps {
     store: BarkadaStore;
     myMemberId?: string;
+    onAddDirectPayment?: (fromId: string, toId: string, amount: number, paidAt: string, note?: string) => void;
+    onRemoveDirectPayment?: (id: string) => void;
 }
 
 const AVATAR_COLORS = [
@@ -25,44 +32,6 @@ const AVATAR_COLORS = [
     'bg-rose-500',
 ];
 
-const GROUP_COLORS = [
-    {
-        row: 'bg-blue-50 dark:bg-blue-950/20',
-        header: 'bg-blue-100 dark:bg-blue-900/40 font-semibold',
-        text: 'text-blue-800 dark:text-blue-200',
-        subtotal: 'bg-blue-100/60 dark:bg-blue-900/20',
-    },
-    {
-        row: 'bg-amber-50 dark:bg-amber-950/20',
-        header: 'bg-amber-100 dark:bg-amber-900/40 font-semibold',
-        text: 'text-amber-800 dark:text-amber-200',
-        subtotal: 'bg-amber-100/60 dark:bg-amber-900/20',
-    },
-    {
-        row: 'bg-green-50 dark:bg-green-950/20',
-        header: 'bg-green-100 dark:bg-green-900/40 font-semibold',
-        text: 'text-green-800 dark:text-green-200',
-        subtotal: 'bg-green-100/60 dark:bg-green-900/20',
-    },
-    {
-        row: 'bg-rose-50 dark:bg-rose-950/20',
-        header: 'bg-rose-100 dark:bg-rose-900/40 font-semibold',
-        text: 'text-rose-800 dark:text-rose-200',
-        subtotal: 'bg-rose-100/60 dark:bg-rose-900/20',
-    },
-    {
-        row: 'bg-violet-50 dark:bg-violet-950/20',
-        header: 'bg-violet-100 dark:bg-violet-900/40 font-semibold',
-        text: 'text-violet-800 dark:text-violet-200',
-        subtotal: 'bg-violet-100/60 dark:bg-violet-900/20',
-    },
-    {
-        row: 'bg-teal-50 dark:bg-teal-950/20',
-        header: 'bg-teal-100 dark:bg-teal-900/40 font-semibold',
-        text: 'text-teal-800 dark:text-teal-200',
-        subtotal: 'bg-teal-100/60 dark:bg-teal-900/20',
-    },
-];
 
 function avatarColor(members: Member[], id: string): string {
     const i = members.findIndex((m) => m.id === id);
@@ -91,14 +60,87 @@ function MemberAvatar({ name, members, id, size = 'md' }: { name: string; member
     );
 }
 
-export function SettlementView({ store, myMemberId }: SettlementViewProps) {
-    const { members, collections, collectionPayments } = store;
+interface RecordPaymentDialogProps {
+    settlement: Settlement;
+    memberById: Record<string, Member>;
+    members: Member[];
+    myMemberId?: string;
+    onConfirm: (amount: number, note: string, paidAt: string) => void;
+    onClose: () => void;
+}
+
+function RecordPaymentDialog({ settlement, memberById, members, myMemberId, onConfirm, onClose }: RecordPaymentDialogProps) {
+    const [amount, setAmount] = useState(settlement.amount.toFixed(2));
+    const [note, setNote] = useState('');
+    const [paidAt, setPaidAt] = useState(() => new Date().toISOString().split('T')[0]);
+
+    const from = memberById[settlement.fromId] ?? { id: settlement.fromId, name: '?' } as Member;
+    const to = memberById[settlement.toId] ?? { id: settlement.toId, name: '?' } as Member;
+
+    const handleSubmit = () => {
+        const parsed = parseFloat(amount);
+        if (!parsed || parsed <= 0) return;
+        onConfirm(parsed, note.trim(), paidAt);
+    };
+
+    return (
+        <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+            <DialogContent className="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Record Payment</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                    {/* From → To */}
+                    <div className="flex items-center justify-center gap-3 rounded-xl bg-muted/50 px-4 py-3">
+                        <div className="flex flex-col items-center gap-1">
+                            <MemberAvatar name={from.name} members={members} id={from.id} />
+                            <span className="text-xs font-medium">{from.id === myMemberId ? 'You' : from.name}</span>
+                        </div>
+                        <ArrowRight className="size-4 text-muted-foreground" />
+                        <div className="flex flex-col items-center gap-1">
+                            <MemberAvatar name={to.name} members={members} id={to.id} />
+                            <span className="text-xs font-medium">{to.id === myMemberId ? 'You' : to.name}</span>
+                        </div>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Amount (₱)</Label>
+                        <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">Suggested: {formatPeso(settlement.amount)}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Date</Label>
+                        <Input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Note (optional)</Label>
+                        <Input placeholder="e.g. GCash, cash" value={note} onChange={(e) => setNote(e.target.value)} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>Cancel</Button>
+                    <Button onClick={handleSubmit}>Save Payment</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+export function SettlementView({ store, myMemberId, onAddDirectPayment, onRemoveDirectPayment }: SettlementViewProps) {
+    const { members, collections, collectionPayments, directPayments = [] } = store;
     const activeExpenses = getActiveExpenses(store);
-    const settlements = calculateSettlements(members, activeExpenses, collections, collectionPayments);
+    const settlements = calculateSettlements(members, activeExpenses, collections, collectionPayments, directPayments);
     const totalSpend = getTotalSpend(activeExpenses);
     const spendByCategory = getSpendByCategory(activeExpenses);
     const allCategories = getAllCategories(store);
     const allCategoryKeys = getAllCategoryKeys(store);
+
+    const [recordingSettlement, setRecordingSettlement] = useState<Settlement | null>(null);
 
     const paidByMember: Record<string, number> = Object.fromEntries(members.map((m) => [m.id, 0]));
     for (const expense of activeExpenses) {
@@ -128,7 +170,7 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
         );
     }
 
-    if (activeExpenses.length === 0) {
+    if (activeExpenses.length === 0 && directPayments.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center p-8 pt-16 text-center">
                 <p className="text-4xl">🤝</p>
@@ -142,6 +184,20 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
 
     return (
         <div className="space-y-4 p-4">
+            {recordingSettlement && (
+                <RecordPaymentDialog
+                    settlement={recordingSettlement}
+                    memberById={memberById}
+                    members={members}
+                    myMemberId={myMemberId}
+                    onConfirm={(amount, note, paidAt) => {
+                        onAddDirectPayment?.(recordingSettlement.fromId, recordingSettlement.toId, amount, paidAt, note || undefined);
+                        setRecordingSettlement(null);
+                    }}
+                    onClose={() => setRecordingSettlement(null)}
+                />
+            )}
+
             {/* Transactions needed */}
             <Card>
                 <CardHeader>
@@ -184,6 +240,16 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
                                                     <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-600 dark:bg-green-950/40 dark:text-green-400">receives</span>
                                                 </div>
                                             </div>
+                                            {onAddDirectPayment && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="mt-3 w-full"
+                                                    onClick={() => setRecordingSettlement(s)}
+                                                >
+                                                    Mark as Paid
+                                                </Button>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -196,7 +262,8 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
                                         <TableHead className="pl-6">From</TableHead>
                                         <TableHead />
                                         <TableHead>To</TableHead>
-                                        <TableHead className="pr-6 text-right">Amount</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                        {onAddDirectPayment && <TableHead className="pr-6" />}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -218,7 +285,14 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
                                                         <span className={to.name === '(Deleted)' ? 'font-medium italic text-muted-foreground' : 'font-medium'}>{to.id === myMemberId ? 'You' : to.name}</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="pr-6 text-right font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{formatPeso(s.amount)}</TableCell>
+                                                <TableCell className="text-right font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{formatPeso(s.amount)}</TableCell>
+                                                {onAddDirectPayment && (
+                                                    <TableCell className="pr-6 text-right">
+                                                        <Button size="sm" variant="outline" onClick={() => setRecordingSettlement(s)}>
+                                                            Mark as Paid
+                                                        </Button>
+                                                    </TableCell>
+                                                )}
                                             </TableRow>
                                         );
                                     })}
@@ -228,6 +302,51 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Recorded direct payments */}
+            {directPayments.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Recorded Payments</CardTitle>
+                        <p className="text-sm text-muted-foreground">Direct payments already made</p>
+                    </CardHeader>
+                    <CardContent className="px-0 pb-2">
+                        <div className="divide-y">
+                            {[...directPayments].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((p) => {
+                                const from = memberById[p.fromId] ?? { id: p.fromId, name: '?' } as Member;
+                                const to = memberById[p.toId] ?? { id: p.toId, name: '?' } as Member;
+                                return (
+                                    <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                            <MemberAvatar name={from.name} members={members} id={from.id} size="sm" />
+                                            <span className="truncate text-sm font-medium">{from.id === myMemberId ? 'You' : from.name}</span>
+                                            <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" />
+                                            <MemberAvatar name={to.name} members={members} id={to.id} size="sm" />
+                                            <span className="truncate text-sm font-medium">{to.id === myMemberId ? 'You' : to.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <div className="text-right">
+                                                <p className="text-sm font-semibold tabular-nums text-green-600 dark:text-green-400">{formatPeso(p.amount)}</p>
+                                                {p.note && <p className="text-xs text-muted-foreground">{p.note}</p>}
+                                            </div>
+                                            {onRemoveDirectPayment && (
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="size-7 text-muted-foreground hover:text-red-500"
+                                                    onClick={() => onRemoveDirectPayment(p.id)}
+                                                >
+                                                    <Trash2 className="size-3.5" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Member balances */}
             <Card>
@@ -244,7 +363,9 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
                         {members.map((m) => {
                             const paid = paidByMember[m.id] ?? 0;
                             const collectionPaid = collectionPaidByMember[m.id] ?? 0;
-                            const net = paid + collectionPaid - sharePerPerson;
+                            const directOut = directPayments.filter((p) => p.fromId === m.id).reduce((s, p) => s + p.amount, 0);
+                            const directIn = directPayments.filter((p) => p.toId === m.id).reduce((s, p) => s + p.amount, 0);
+                            const net = paid + collectionPaid + directOut - directIn - sharePerPerson;
                             const isOwed = net > 0.005;
                             const owes = net < -0.005;
                             return (
@@ -258,6 +379,9 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
                                         <p className="text-xs text-muted-foreground">Expenses paid {formatPeso(paid)}</p>
                                         {collectionPaid > 0 && (
                                             <p className="text-xs text-indigo-600 dark:text-indigo-400">+ Collections {formatPeso(collectionPaid)}</p>
+                                        )}
+                                        {directOut > 0 && (
+                                            <p className="text-xs text-green-600 dark:text-green-400">+ Direct paid {formatPeso(directOut)}</p>
                                         )}
                                     </div>
                                     <div className="text-right">
@@ -279,6 +403,7 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
                                 <TableHead className="pl-6">Member</TableHead>
                                 <TableHead className="text-right">Expenses Paid</TableHead>
                                 <TableHead className="text-right">Collections</TableHead>
+                                <TableHead className="text-right">Direct Paid</TableHead>
                                 <TableHead className="pr-6 text-right">Net</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -286,7 +411,9 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
                             {members.map((m) => {
                                 const paid = paidByMember[m.id] ?? 0;
                                 const collectionPaid = collectionPaidByMember[m.id] ?? 0;
-                                const net = paid + collectionPaid - sharePerPerson;
+                                const directOut = directPayments.filter((p) => p.fromId === m.id).reduce((s, p) => s + p.amount, 0);
+                                const directIn = directPayments.filter((p) => p.toId === m.id).reduce((s, p) => s + p.amount, 0);
+                                const net = paid + collectionPaid + directOut - directIn - sharePerPerson;
                                 const isOwed = net > 0.005;
                                 const owes = net < -0.005;
                                 return (
@@ -304,6 +431,9 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
                                         <TableCell className="text-right tabular-nums text-indigo-600 dark:text-indigo-400">
                                             {collectionPaid > 0 ? formatPeso(collectionPaid) : '—'}
                                         </TableCell>
+                                        <TableCell className="text-right tabular-nums text-green-600 dark:text-green-400">
+                                            {directOut > 0 ? formatPeso(directOut) : '—'}
+                                        </TableCell>
                                         <TableCell className={cn('pr-6 text-right font-semibold tabular-nums', isOwed ? 'text-green-600 dark:text-green-400' : owes ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground')}>
                                             {isOwed ? '+' : ''}{formatPeso(net)}
                                         </TableCell>
@@ -315,6 +445,7 @@ export function SettlementView({ store, myMemberId }: SettlementViewProps) {
                             <TableRow>
                                 <TableCell className="pl-6">Total</TableCell>
                                 <TableCell className="text-right font-semibold tabular-nums">{formatPeso(totalSpend)}</TableCell>
+                                <TableCell />
                                 <TableCell />
                                 <TableCell className="pr-6" />
                             </TableRow>

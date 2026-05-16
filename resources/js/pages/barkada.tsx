@@ -53,6 +53,8 @@ export default function Barkada({ view: rawView }: BarkadaProps) {
         addCarpool,
         updateCarpool,
         removeCarpool,
+        addDirectPayment,
+        removeDirectPayment,
     } = useBarkadaStore();
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -93,7 +95,7 @@ export default function Barkada({ view: rawView }: BarkadaProps) {
                         {view === 'expenses' && (
                             <ExpensesView store={store} onAdd={addExpense} onRemove={removeExpense} />
                         )}
-                        {view === 'settlement' && <SettlementView store={store} />}
+                        {view === 'settlement' && <SettlementView store={store} onAddDirectPayment={addDirectPayment} onRemoveDirectPayment={removeDirectPayment} />}
                         {view === 'categories' && (
                             <CategoriesView store={store} onAdd={addCategory} onUpdate={updateCategory} onToggleActive={toggleCategoryActive} onRemove={removeCategory} />
                         )}

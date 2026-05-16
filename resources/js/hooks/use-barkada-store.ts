@@ -1,4 +1,4 @@
-import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, Expense, GroceryItem, GrocerySection, Member, Settlement, Trip } from '@/types/barkada';
+import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, DirectPayment, Expense, GroceryItem, GrocerySection, Member, Settlement, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useState } from 'react';
 
@@ -18,6 +18,7 @@ const DEFAULT_STORE: BarkadaStore = {
     groceryItems: [],
     collections: [],
     collectionPayments: [],
+    directPayments: [],
 };
 
 function persist(store: BarkadaStore): void {
@@ -33,8 +34,9 @@ export function calculateSettlements(
     expenses: Expense[],
     collections: Collection[] = [],
     collectionPayments: CollectionPayment[] = [],
+    directPayments: DirectPayment[] = [],
 ): Settlement[] {
-    if (members.length === 0 || (expenses.length === 0 && collectionPayments.length === 0)) {
+    if (members.length === 0 || (expenses.length === 0 && collectionPayments.length === 0 && directPayments.length === 0)) {
         return [];
     }
 
@@ -93,6 +95,12 @@ export function calculateSettlements(
         if (!collectorId) continue;
         balances[payment.fromMemberId] = (balances[payment.fromMemberId] ?? 0) + payment.amount;
         balances[collectorId] = (balances[collectorId] ?? 0) - payment.amount;
+    }
+
+    // Factor in direct payments: payer's balance increases (debt reduces), receiver's decreases.
+    for (const payment of directPayments) {
+        balances[payment.fromId] = (balances[payment.fromId] ?? 0) + payment.amount;
+        balances[payment.toId] = (balances[payment.toId] ?? 0) - payment.amount;
     }
 
     const creditors: Array<{ id: string; amount: number }> = [];
@@ -188,6 +196,7 @@ export function useBarkadaStore() {
                     groceryItems: parsed.groceryItems ?? [],
                     collections: parsed.collections ?? [],
                     collectionPayments: parsed.collectionPayments ?? [],
+                    directPayments: parsed.directPayments ?? [],
                 });
             }
         } catch {
@@ -430,6 +439,24 @@ export function useBarkadaStore() {
         updateStore((prev) => ({ ...prev, collectionPayments: prev.collectionPayments.filter((p) => p.id !== id) }));
     };
 
+    const addDirectPayment = (fromId: string, toId: string, amount: number, paidAt: string, note?: string, loggedByName?: string) => {
+        const payment: DirectPayment = {
+            id: crypto.randomUUID(),
+            fromId,
+            toId,
+            amount,
+            paidAt,
+            createdAt: new Date().toISOString(),
+            ...(note ? { note } : {}),
+            ...(loggedByName ? { loggedByName } : {}),
+        };
+        updateStore((prev) => ({ ...prev, directPayments: [...prev.directPayments, payment] }));
+    };
+
+    const removeDirectPayment = (id: string) => {
+        updateStore((prev) => ({ ...prev, directPayments: prev.directPayments.filter((p) => p.id !== id) }));
+    };
+
     const clearAll = () => {
         persist(DEFAULT_STORE);
         setStore(DEFAULT_STORE);
@@ -465,6 +492,8 @@ export function useBarkadaStore() {
         removeCollection,
         addCollectionPayment,
         removeCollectionPayment,
+        addDirectPayment,
+        removeDirectPayment,
         clearAll,
     };
 }

@@ -18,6 +18,7 @@ const DEFAULT_STORE: BarkadaStore = {
     groceryItems: [],
     collections: [],
     collectionPayments: [],
+    directPayments: [],
 };
 
 // ── Pending op types ──────────────────────────────────────────────────────────

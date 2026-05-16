@@ -98,6 +98,8 @@ function BarkadaApp() {
         addCarpool,
         updateCarpool,
         removeCarpool,
+        addDirectPayment,
+        removeDirectPayment,
     } = useBarkadaStore();
 
     return (
@@ -197,7 +199,7 @@ function BarkadaApp() {
                             {view === 'expenses' && (
                                 <ExpensesView store={store} onAdd={addExpense} onRemove={removeExpense} />
                             )}
-                            {view === 'settlement' && <SettlementView store={store} />}
+                            {view === 'settlement' && <SettlementView store={store} onAddDirectPayment={addDirectPayment} onRemoveDirectPayment={removeDirectPayment} />}
                             {view === 'categories' && (
                                 <CategoriesView
                                     store={store}
