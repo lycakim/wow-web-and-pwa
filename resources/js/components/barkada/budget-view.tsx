@@ -512,9 +512,9 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                                     className="w-24 text-right"
                                 />
                                 <span className="text-sm text-muted-foreground">%</span>
-                                {totalBudget > 0 && budgetBuffer > 0 && (
+                                {allItemsBudget > 0 && budgetBuffer > 0 && memberCount > 0 && (
                                     <span className="text-sm text-muted-foreground">
-                                        → <span className="font-semibold text-foreground">{formatPeso(totalBudget * (1 + budgetBuffer / 100))}</span>
+                                        → <span className="font-semibold text-foreground">{formatPeso(bufferAmount / memberCount)}</span>/person
                                     </span>
                                 )}
                             </div>
@@ -538,9 +538,9 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                                     className="w-24 text-right"
                                 />
                                 <span className="text-sm text-muted-foreground">%</span>
-                                {totalBudget > 0 && (contingency ?? 0) > 0 && memberCount > 0 && (
+                                {allItemsBudget > 0 && (contingency ?? 0) > 0 && memberCount > 0 && (
                                     <span className="text-sm text-muted-foreground">
-                                        → <span className="font-semibold text-foreground">{formatPeso(totalBudget * (contingency / 100) / memberCount)}</span>/person
+                                        → <span className="font-semibold text-foreground">{formatPeso(contingencyAmount / memberCount)}</span>/person
                                     </span>
                                 )}
                             </div>
