@@ -155,21 +155,21 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceVi
                                 type="button"
                                 onClick={() => selectMe(m.id)}
                                 className={cn(
-                                    'flex shrink-0 flex-col items-center gap-1.5 rounded-2xl border-2 px-3 py-2.5 transition-all',
+                                    'flex shrink-0 items-center gap-2 rounded-2xl border-2 px-3 py-2 transition-all',
                                     selected
                                         ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40'
                                         : 'border-transparent bg-muted/50 hover:bg-muted',
                                 )}
                             >
                                 <span className={cn(
-                                    'inline-flex size-9 items-center justify-center rounded-full font-bold text-white text-xs',
+                                    'inline-flex size-8 shrink-0 items-center justify-center rounded-full font-bold text-white text-xs',
                                     avatarColor(members, m.id),
                                     selected && 'ring-2 ring-indigo-600 ring-offset-2',
                                 )}>
                                     {getInitials(m.name)}
                                 </span>
                                 <span className={cn(
-                                    'max-w-[56px] truncate text-[11px] font-medium leading-tight',
+                                    'text-sm font-medium',
                                     selected ? 'text-indigo-700 dark:text-indigo-300' : 'text-muted-foreground',
                                 )}>
                                     {m.id === myMemberIdProp ? 'You' : m.name}
