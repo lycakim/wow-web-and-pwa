@@ -143,14 +143,14 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
     const [isEditing, setIsEditing] = useState(false);
     const [myMemberId, setMyMemberId] = useState('');
 
-    const { trip, members, collections, collectionPayments, carpools } = store;
+    const { trip, members, collections, collectionPayments, memberPayments = [], directPayments = [], carpools } = store;
     const activeExpenses = getActiveExpenses(store);
     const activeBudgetItems = getActiveBudgetItems(store);
     const totalBudget = getTotalBudget(activeBudgetItems);
     const totalSpend = getTotalSpend(activeExpenses);
     const remaining = totalBudget - totalSpend;
     const isOverBudget = remaining < 0;
-    const settlements = calculateSettlements(members, activeExpenses, collections, collectionPayments);
+    const settlements = calculateSettlements(members, activeExpenses, collections, collectionPayments, directPayments);
     const allCategories = getAllCategories(store);
     const spendByCategory = getSpendByCategory(activeExpenses);
     const { countdown, dayProgress } = getDaysInfo(trip.startDate, trip.endDate);
@@ -176,12 +176,13 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
 
     const me = members.find((m) => m.id === myMemberId);
     const bufferContingencyShare = members.length > 0
-        ? ((store.budgetBuffer > 0 ? totalBudget * store.budgetBuffer / 100 : 0) + (store.contingency ?? 0)) / members.length
+        ? totalBudget * ((store.budgetBuffer ?? 0) + (store.contingency ?? 0)) / 100 / members.length
         : 0;
     const myBudgetShare = me
         ? calculateMemberBudgetShare(myMemberId, activeBudgetItems, carpools, members.length) + bufferContingencyShare
         : 0;
-    const myAdvancePaid = collectionPayments.filter((p) => p.fromMemberId === myMemberId).reduce((s, p) => s + p.amount, 0);
+    const myAdvancePaid = collectionPayments.filter((p) => p.fromMemberId === myMemberId).reduce((s, p) => s + p.amount, 0)
+        + memberPayments.filter((p) => p.memberId === myMemberId).reduce((s, p) => s + p.amount, 0);
     const myStillNeeded = Math.max(0, myBudgetShare - myAdvancePaid);
     const allPaidUp = myBudgetShare > 0 && myStillNeeded === 0;
 
@@ -204,7 +205,8 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
     // Member balance summaries
     const memberBalanceSummaries = members.map((m) => {
         const share = calculateMemberBudgetShare(m.id, activeBudgetItems, carpools, members.length) + bufferContingencyShare;
-        const advance = collectionPayments.filter((p) => p.fromMemberId === m.id).reduce((s, p) => s + p.amount, 0);
+        const advance = collectionPayments.filter((p) => p.fromMemberId === m.id).reduce((s, p) => s + p.amount, 0)
+            + memberPayments.filter((p) => p.memberId === m.id).reduce((s, p) => s + p.amount, 0);
         return { member: m, share, advance, remaining: share - advance };
     });
 

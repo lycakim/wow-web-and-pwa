@@ -403,7 +403,7 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                                 <p className="text-sm text-muted-foreground">
                                     {hasCarpoolItems ? 'Carpool-aware split' : 'Equal split'}
                                     {budgetBuffer > 0 ? ` · +${budgetBuffer}% buffer` : ''}
-                                    {(contingency ?? 0) > 0 ? ` · +${formatPeso(contingency)} contingency` : ''}
+                                    {(contingency ?? 0) > 0 ? ` · +${contingency}% contingency` : ''}
                                     {carpools.length > 0 ? ' · grouped by car' : ''}
                                 </p>
                             </CardHeader>

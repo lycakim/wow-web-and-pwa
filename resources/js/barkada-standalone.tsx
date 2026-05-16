@@ -3,9 +3,12 @@ import '../../resources/css/standalone.css';
 import { BudgetView } from '@/components/barkada/budget-view';
 import { CarpoolsView } from '@/components/barkada/carpools-view';
 import { CategoriesView } from '@/components/barkada/categories-view';
+import { CollectionsView } from '@/components/barkada/collections-view';
 import { ExpensesView } from '@/components/barkada/expenses-view';
+import { GroceryView } from '@/components/barkada/grocery-view';
 import { HomeView } from '@/components/barkada/home-view';
 import { MembersView } from '@/components/barkada/members-view';
+import { MyBalanceView } from '@/components/barkada/my-balance-view';
 import { SettlementView } from '@/components/barkada/settlement-view';
 import {
     Sidebar,
@@ -24,7 +27,7 @@ import {
 import { useBarkadaStore } from '@/hooks/use-barkada-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
-import { Car, HandCoins, Home, Moon, ReceiptText, Sun, Tag, Users, Wallet } from 'lucide-react';
+import { ArrowLeftRight, Car, ClipboardList, HandCoins, Home, Moon, ReceiptText, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -32,10 +35,13 @@ type NavItem = { view: View; label: string; icon: React.ElementType };
 
 const NAV_ITEMS: NavItem[] = [
     { view: 'home', label: 'Home', icon: Home },
+    { view: 'mybalance', label: 'My Balance', icon: ArrowLeftRight },
+    { view: 'expenses', label: 'Expenses', icon: ReceiptText },
+    { view: 'collections', label: 'Payment Status', icon: ClipboardList },
+    { view: 'grocery', label: 'Grocery', icon: ShoppingCart },
+    { view: 'settlement', label: 'Settlement', icon: HandCoins },
     { view: 'members', label: 'Members', icon: Users },
     { view: 'budget', label: 'Budget', icon: Wallet },
-    { view: 'expenses', label: 'Expenses', icon: ReceiptText },
-    { view: 'settlement', label: 'Settlement', icon: HandCoins },
     { view: 'categories', label: 'Categories', icon: Tag },
     { view: 'carpools', label: 'Carpools', icon: Car },
 ];
@@ -100,6 +106,14 @@ function BarkadaApp() {
         removeCarpool,
         addDirectPayment,
         removeDirectPayment,
+        addMemberPayment,
+        removeMemberPayment,
+        addGroceryItem,
+        toggleGroceryItem,
+        assignGroceryItem,
+        removeGroceryItem,
+        renameGroceryItem,
+        clearCheckedGroceryItems,
     } = useBarkadaStore();
 
     return (
@@ -198,6 +212,22 @@ function BarkadaApp() {
                             )}
                             {view === 'expenses' && (
                                 <ExpensesView store={store} onAdd={addExpense} onRemove={removeExpense} />
+                            )}
+                            {view === 'mybalance' && (
+                                <MyBalanceView store={store} onAddMemberPayment={addMemberPayment} onRemoveMemberPayment={removeMemberPayment} />
+                            )}
+                            {view === 'collections' && <CollectionsView store={store} />}
+                            {view === 'grocery' && (
+                                <GroceryView
+                                    items={store.groceryItems}
+                                    members={store.members}
+                                    onAdd={addGroceryItem}
+                                    onToggle={toggleGroceryItem}
+                                    onAssign={assignGroceryItem}
+                                    onRemove={removeGroceryItem}
+                                    onRename={renameGroceryItem}
+                                    onClearChecked={clearCheckedGroceryItems}
+                                />
                             )}
                             {view === 'settlement' && <SettlementView store={store} onAddDirectPayment={addDirectPayment} onRemoveDirectPayment={removeDirectPayment} />}
                             {view === 'categories' && (

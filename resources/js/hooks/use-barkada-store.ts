@@ -397,6 +397,15 @@ export function useBarkadaStore() {
         updateStore((prev) => ({ ...prev, groceryItems: prev.groceryItems.filter((item) => item.id !== id) }));
     };
 
+    const renameGroceryItem = (id: string, name: string) => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        updateStore((prev) => ({
+            ...prev,
+            groceryItems: prev.groceryItems.map((item) => item.id === id ? { ...item, name: trimmed } : item),
+        }));
+    };
+
     const clearCheckedGroceryItems = (section?: GrocerySection) => {
         updateStore((prev) => ({
             ...prev,
@@ -506,6 +515,7 @@ export function useBarkadaStore() {
         toggleGroceryItem,
         assignGroceryItem,
         removeGroceryItem,
+        renameGroceryItem,
         clearCheckedGroceryItems,
         addCollection,
         removeCollection,
