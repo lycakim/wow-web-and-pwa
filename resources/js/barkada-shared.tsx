@@ -45,7 +45,7 @@ import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeftRight, Bell, BellOff, Car, Check, ChevronDown, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Vault, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Bell, BellOff, Car, Check, ChevronDown, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Vault, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -400,7 +400,22 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
             <SidebarInset>
                 {/* Header */}
                 <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-                    <SidebarTrigger className="-ml-1 size-9" />
+                    {view !== 'home' ? (
+                        <>
+                            {/* Mobile: back button */}
+                            <button
+                                type="button"
+                                onClick={() => setView('home')}
+                                className="sm:hidden -ml-1 flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                            >
+                                <ArrowLeft className="size-5" />
+                            </button>
+                            {/* Desktop: sidebar trigger */}
+                            <SidebarTrigger className="-ml-1 size-9 hidden sm:flex" />
+                        </>
+                    ) : (
+                        <SidebarTrigger className="-ml-1 size-9" />
+                    )}
                     <div className="h-4 w-px bg-border" />
                     <nav className="flex items-center gap-1 text-sm text-muted-foreground">
                         <span className="hidden sm:inline">Barkada Planner</span>
