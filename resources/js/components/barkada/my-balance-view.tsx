@@ -137,6 +137,29 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceVi
         return { member: m, share, advance, remaining: Math.max(0, share - advance) };
     });
 
+    // Waterfall: cascade advance payment through each budget item in order
+    const itemCoverage = me
+        ? (() => {
+            let remaining = myTotalAdvance;
+            return activeBudgetItems
+                .map((item) => {
+                    const share = calculateMemberBudgetShare(me.id, [item], carpools, members.length);
+                    if (share <= 0.005) return null; // item doesn't apply to this member
+                    if (remaining >= share) {
+                        remaining -= share;
+                        return { item, share, status: 'covered' as const, paid: share, leftover: 0 };
+                    }
+                    const paid = remaining;
+                    remaining = 0;
+                    if (paid > 0.005) {
+                        return { item, share, status: 'partial' as const, paid, leftover: share - paid };
+                    }
+                    return { item, share, status: 'unpaid' as const, paid: 0, leftover: share };
+                })
+                .filter((x): x is NonNullable<typeof x> => x !== null);
+        })()
+        : [];
+
     // Collection breakdown for my payments
     const collectorById = Object.fromEntries(members.map((m) => [m.id, m]));
     const collectionById = Object.fromEntries(collections.map((c) => [c.id, c]));
@@ -257,6 +280,46 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceVi
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Payment coverage waterfall */}
+                    {itemCoverage.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Payment Coverage</CardTitle>
+                                <p className="text-sm text-muted-foreground">How your advance covers each budget item</p>
+                            </CardHeader>
+                            <CardContent className="px-0 pb-0">
+                                <div className="divide-y">
+                                    {itemCoverage.map(({ item, share, status, paid, leftover }) => (
+                                        <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                                            <span className="shrink-0 text-base">
+                                                {status === 'covered' ? '✅' : status === 'partial' ? '🟡' : '⬜'}
+                                            </span>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-medium">{item.name}</p>
+                                                {status === 'partial' && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {formatPeso(paid)} covered · {formatPeso(leftover)} remaining
+                                                    </p>
+                                                )}
+                                                {status === 'unpaid' && (
+                                                    <p className="text-xs text-muted-foreground">Not yet covered</p>
+                                                )}
+                                            </div>
+                                            <span className={cn(
+                                                'shrink-0 text-sm font-semibold tabular-nums',
+                                                status === 'covered' ? 'text-green-600 dark:text-green-400'
+                                                    : status === 'partial' ? 'text-amber-600 dark:text-amber-400'
+                                                    : 'text-muted-foreground',
+                                            )}>
+                                                {formatPeso(share)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* My advance payments */}
                     {myCollectionPayments.length > 0 && (
