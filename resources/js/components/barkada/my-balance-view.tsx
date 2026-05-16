@@ -1,9 +1,13 @@
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { BarkadaStore, Member } from '@/types/barkada';
 import { calculateMemberBudgetShare, getActiveBudgetItems, getAllCategories } from '@/types/barkada';
 import { getTotalBudget } from '@/hooks/use-barkada-store';
-import { ArrowRight, Wallet } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const AVATAR_COLORS = [
@@ -34,10 +38,16 @@ const MY_MEMBER_KEY = 'barkada-my-member-id';
 interface MyBalanceViewProps {
     store: BarkadaStore;
     myMemberId?: string;
+    onAddMemberPayment?: (memberId: string, amount: number, paidAt: string, note?: string) => void;
+    onRemoveMemberPayment?: (id: string) => void;
 }
 
-export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceViewProps) {
-    const { members, budgetItems, carpools, collections, collectionPayments } = store;
+export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPayment, onRemoveMemberPayment }: MyBalanceViewProps) {
+    const { members, budgetItems, carpools, collections, collectionPayments, memberPayments = [] } = store;
+    const [showAddPayment, setShowAddPayment] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [paymentNote, setPaymentNote] = useState('');
+    const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [myMemberId, setMyMemberId] = useState<string>('');
 
     // Persist "I am" selection — prefer join-based ID, fall back to saved, then first member
@@ -89,7 +99,9 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceVi
 
     // My collection payments (advances paid)
     const myCollectionPayments = collectionPayments.filter((p) => p.fromMemberId === myMemberId);
-    const myTotalAdvance = myCollectionPayments.reduce((s, p) => s + p.amount, 0);
+    const myMemberPayments = memberPayments.filter((p) => p.memberId === myMemberId);
+    const myTotalAdvance = myCollectionPayments.reduce((s, p) => s + p.amount, 0)
+        + myMemberPayments.reduce((s, p) => s + p.amount, 0);
 
     // Still need to bring
     const stillNeeded = Math.max(0, myBudgetShare - myTotalAdvance);
@@ -131,9 +143,8 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceVi
     const memberSummaries = members.map((m) => {
         const share = calculateMemberBudgetShare(m.id, activeBudgetItems, carpools, members.length)
             + (members.length > 0 ? (withBuffer + contingency) / members.length : 0);
-        const advance = collectionPayments
-            .filter((p) => p.fromMemberId === m.id)
-            .reduce((s, p) => s + p.amount, 0);
+        const advance = collectionPayments.filter((p) => p.fromMemberId === m.id).reduce((s, p) => s + p.amount, 0)
+            + memberPayments.filter((p) => p.memberId === m.id).reduce((s, p) => s + p.amount, 0);
         return { member: m, share, advance, remaining: Math.max(0, share - advance) };
     });
 
@@ -205,6 +216,53 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceVi
 
             {me && (
                 <>
+                    {/* Add payment dialog */}
+                    {showAddPayment && (
+                        <Dialog open onOpenChange={(open) => { if (!open) setShowAddPayment(false); }}>
+                            <DialogContent className="max-w-sm">
+                                <DialogHeader>
+                                    <DialogTitle>Record Payment — {me.name}</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <Label>Amount (₱)</Label>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            placeholder="0.00"
+                                            value={paymentAmount}
+                                            onChange={(e) => setPaymentAmount(e.target.value)}
+                                            autoFocus
+                                        />
+                                        {stillNeeded > 0 && (
+                                            <p className="text-xs text-muted-foreground">Remaining: {formatPeso(stillNeeded)}</p>
+                                        )}
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label>Date</Label>
+                                        <Input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label>Note (optional)</Label>
+                                        <Input placeholder="e.g. GCash, cash" value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setShowAddPayment(false)}>Cancel</Button>
+                                    <Button onClick={() => {
+                                        const amt = parseFloat(paymentAmount);
+                                        if (!amt || amt <= 0) return;
+                                        onAddMemberPayment?.(myMemberId, amt, paymentDate, paymentNote.trim() || undefined);
+                                        setPaymentAmount('');
+                                        setPaymentNote('');
+                                        setShowAddPayment(false);
+                                    }}>Save Payment</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+
                     {/* Personal summary hero card */}
                     <Card className={cn(
                         'overflow-hidden border-0',
@@ -242,6 +300,16 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceVi
                                     </p>
                                 </div>
                             </div>
+                            {onAddMemberPayment && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddPayment(true)}
+                                    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/30 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors"
+                                >
+                                    <Plus className="size-4" />
+                                    Add Payment
+                                </button>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -322,7 +390,7 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceVi
                     )}
 
                     {/* My advance payments */}
-                    {myCollectionPayments.length > 0 && (
+                    {(myCollectionPayments.length > 0 || myMemberPayments.length > 0) && (
                         <Card>
                             <CardHeader>
                                 <CardTitle>Advance Payments</CardTitle>
@@ -330,6 +398,26 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp }: MyBalanceVi
                             </CardHeader>
                             <CardContent className="px-0 pb-0">
                                 <div className="divide-y">
+                                    {myMemberPayments.map((p) => (
+                                        <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-medium">{p.note || 'Payment'}</p>
+                                                <p className="text-xs text-muted-foreground">{formatDate(p.paidAt)}</p>
+                                            </div>
+                                            <span className="text-sm font-bold tabular-nums text-green-600 dark:text-green-400">
+                                                −{formatPeso(p.amount)}
+                                            </span>
+                                            {onRemoveMemberPayment && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onRemoveMemberPayment(p.id)}
+                                                    className="shrink-0 text-muted-foreground hover:text-red-500"
+                                                >
+                                                    <Trash2 className="size-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
                                     {myCollectionPayments.map((p) => {
                                         const col = collectionById[p.collectionId];
                                         const collector = collectorById[col?.collectorId ?? ''];

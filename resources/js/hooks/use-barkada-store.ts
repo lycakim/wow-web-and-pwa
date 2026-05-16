@@ -1,4 +1,4 @@
-import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, DirectPayment, Expense, GroceryItem, GrocerySection, Member, Settlement, Trip } from '@/types/barkada';
+import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, DirectPayment, Expense, GroceryItem, GrocerySection, Member, MemberPayment, Settlement, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useState } from 'react';
 
@@ -19,6 +19,7 @@ const DEFAULT_STORE: BarkadaStore = {
     collections: [],
     collectionPayments: [],
     directPayments: [],
+    memberPayments: [],
 };
 
 function persist(store: BarkadaStore): void {
@@ -197,6 +198,7 @@ export function useBarkadaStore() {
                     collections: parsed.collections ?? [],
                     collectionPayments: parsed.collectionPayments ?? [],
                     directPayments: parsed.directPayments ?? [],
+                    memberPayments: parsed.memberPayments ?? [],
                 });
             }
         } catch {
@@ -439,6 +441,23 @@ export function useBarkadaStore() {
         updateStore((prev) => ({ ...prev, collectionPayments: prev.collectionPayments.filter((p) => p.id !== id) }));
     };
 
+    const addMemberPayment = (memberId: string, amount: number, paidAt: string, note?: string, loggedByName?: string) => {
+        const payment: MemberPayment = {
+            id: crypto.randomUUID(),
+            memberId,
+            amount,
+            paidAt,
+            createdAt: new Date().toISOString(),
+            ...(note ? { note } : {}),
+            ...(loggedByName ? { loggedByName } : {}),
+        };
+        updateStore((prev) => ({ ...prev, memberPayments: [...(prev.memberPayments ?? []), payment] }));
+    };
+
+    const removeMemberPayment = (id: string) => {
+        updateStore((prev) => ({ ...prev, memberPayments: (prev.memberPayments ?? []).filter((p) => p.id !== id) }));
+    };
+
     const addDirectPayment = (fromId: string, toId: string, amount: number, paidAt: string, note?: string, loggedByName?: string) => {
         const payment: DirectPayment = {
             id: crypto.randomUUID(),
@@ -492,6 +511,8 @@ export function useBarkadaStore() {
         removeCollection,
         addCollectionPayment,
         removeCollectionPayment,
+        addMemberPayment,
+        removeMemberPayment,
         addDirectPayment,
         removeDirectPayment,
         clearAll,

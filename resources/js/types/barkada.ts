@@ -57,6 +57,7 @@ export interface BarkadaStore {
     collections: Collection[];
     collectionPayments: CollectionPayment[];
     directPayments: DirectPayment[];
+    memberPayments: MemberPayment[];
 }
 
 export type GrocerySection = 'buy' | 'bring' | 'meal';
@@ -80,6 +81,16 @@ export interface CollectionPayment {
     id: string;
     collectionId: string;
     fromMemberId: string;
+    amount: number;
+    note?: string;
+    paidAt: string;
+    createdAt: string;
+    loggedByName?: string;
+}
+
+export interface MemberPayment {
+    id: string;
+    memberId: string;   // who paid toward their share
     amount: number;
     note?: string;
     paidAt: string;

@@ -181,6 +181,8 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
         removeCollectionPayment,
         addDirectPayment,
         removeDirectPayment,
+        addMemberPayment,
+        removeMemberPayment,
     } = useTripStore(tripId);
 
     const { isSubscribed: notifSubscribed, isLoading: notifLoading, isSupported: notifSupported, subscribe: subscribeToNotifs, unsubscribe: unsubscribeFromNotifs } = usePushNotifications(tripId, currentUserName);
@@ -544,7 +546,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                                 />
                             )}
                             {view === 'mybalance' && (
-                                <MyBalanceView store={store} myMemberId={myMemberId ?? undefined} />
+                                <MyBalanceView store={store} myMemberId={myMemberId ?? undefined} onAddMemberPayment={addMemberPayment} onRemoveMemberPayment={removeMemberPayment} />
                             )}
                         </>
                     )}
