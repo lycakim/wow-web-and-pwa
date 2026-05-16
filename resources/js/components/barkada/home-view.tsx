@@ -404,42 +404,6 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                     </CardContent>
                                 </Card>
                             )}
-
-                            {/* Recent Activity */}
-                            {recentExpenses.length > 0 && (
-                                <Card className="gap-0 py-0">
-                                    <CardContent className="p-5">
-                                        <div className="mb-3 flex items-center justify-between">
-                                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Recent Activity</p>
-                                            <button type="button" onClick={() => onNavigate('expenses')} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
-                                                View all
-                                            </button>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {recentExpenses.map((e) => {
-                                                const paidBy = memberById[e.paidById];
-                                                const meta = allCategories[e.category];
-                                                return (
-                                                    <div key={e.id} className="flex items-center gap-3">
-                                                        <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg text-sm', meta?.bgClass ?? 'bg-muted')}>
-                                                            {meta?.icon ?? '📌'}
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="truncate text-sm font-medium">{e.description}</p>
-                                                            <p className="text-[11px] text-muted-foreground">
-                                                                {paidBy?.name ?? '?'} · {new Date(e.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
-                                                            </p>
-                                                        </div>
-                                                        <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
-                                                            −{formatPeso(e.amount)}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
                         </div>
 
                         {/* ── Sidebar (1/3 on lg) ── */}
@@ -535,14 +499,23 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                 </Card>
                             )}
 
-                            {/* Member Balances */}
+                            {/* Member Balances — capped to 5 */}
                             {members.length > 0 && activeBudgetItems.length > 0 && (
                                 <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
-                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Member Balances</p>
-                                        <p className="mb-3 text-[11px] text-muted-foreground">Who owes what</p>
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Member Balances</p>
+                                                <p className="text-[11px] text-muted-foreground">Who owes what</p>
+                                            </div>
+                                            {memberBalanceSummaries.length > 5 && (
+                                                <button type="button" onClick={() => onNavigate('members')} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                                                    View all
+                                                </button>
+                                            )}
+                                        </div>
                                         <div className="space-y-2.5">
-                                            {memberBalanceSummaries.map(({ member, share, advance, remaining: memberRemaining }) => {
+                                            {memberBalanceSummaries.slice(0, 5).map(({ member, share, advance, remaining: memberRemaining }) => {
                                                 const isMe = member.id === myMemberId;
                                                 const isSettled = memberRemaining <= 0.005;
                                                 const isOverpaid = advance > share + 0.005;
@@ -585,6 +558,47 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                                                 </span>
                                                             )}
                                                         </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {memberBalanceSummaries.length > 5 && (
+                                                <p className="pt-1 text-center text-[11px] text-muted-foreground">
+                                                    +{memberBalanceSummaries.length - 5} more members
+                                                </p>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Recent Activity */}
+                            {recentExpenses.length > 0 && (
+                                <Card className="gap-0 py-0">
+                                    <CardContent className="p-5">
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Recent Activity</p>
+                                            <button type="button" onClick={() => onNavigate('expenses')} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                                                View all
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {recentExpenses.map((e) => {
+                                                const paidBy = memberById[e.paidById];
+                                                const meta = allCategories[e.category];
+                                                return (
+                                                    <div key={e.id} className="flex items-center gap-3">
+                                                        <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg text-sm', meta?.bgClass ?? 'bg-muted')}>
+                                                            {meta?.icon ?? '📌'}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate text-sm font-medium">{e.description}</p>
+                                                            <p className="text-[11px] text-muted-foreground">
+                                                                {paidBy?.name ?? '?'} · {new Date(e.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+                                                            </p>
+                                                        </div>
+                                                        <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
+                                                            −{formatPeso(e.amount)}
+                                                        </span>
                                                     </div>
                                                 );
                                             })}
