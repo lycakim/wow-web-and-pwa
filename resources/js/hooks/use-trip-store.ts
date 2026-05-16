@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { generateTripCode } from '@/lib/trip-code';
-import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, Expense, GroceryItem, GrocerySection, Member, Trip } from '@/types/barkada';
+import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, DirectPayment, Expense, GroceryItem, GrocerySection, Member, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useRef, useState } from 'react';
 
@@ -52,6 +52,8 @@ type PendingOp =
     | { type: 'removeCollection'; id: string }
     | { type: 'addCollectionPayment'; payment: CollectionPayment }
     | { type: 'removeCollectionPayment'; id: string }
+    | { type: 'addDirectPayment'; payment: DirectPayment }
+    | { type: 'removeDirectPayment'; id: string }
     | { type: 'regenerateTripCode'; code: string };
 
 // ── Queue / cache helpers ─────────────────────────────────────────────────────
@@ -228,6 +230,22 @@ async function executeOp(op: PendingOp, tripId: string): Promise<void> {
         case 'removeCollectionPayment':
             await supabase.from('collection_payments').delete().eq('id', op.id);
             break;
+        case 'addDirectPayment':
+            await supabase.from('direct_payments').insert({
+                id: op.payment.id,
+                trip_id: tripId,
+                from_id: op.payment.fromId,
+                to_id: op.payment.toId,
+                amount: op.payment.amount,
+                note: op.payment.note ?? null,
+                paid_at: op.payment.paidAt,
+                created_at: op.payment.createdAt,
+                logged_by_name: op.payment.loggedByName ?? null,
+            });
+            break;
+        case 'removeDirectPayment':
+            await supabase.from('direct_payments').delete().eq('id', op.id);
+            break;
         case 'regenerateTripCode':
             await supabase.from('trips').update({ code: op.code }).eq('id', tripId);
             break;
@@ -326,6 +344,19 @@ function mapCollectionPayment(row: Record<string, unknown>): CollectionPayment {
     };
 }
 
+function mapDirectPayment(row: Record<string, unknown>): DirectPayment {
+    return {
+        id: row.id as string,
+        fromId: row.from_id as string,
+        toId: row.to_id as string,
+        amount: Number(row.amount),
+        paidAt: row.paid_at as string,
+        createdAt: row.created_at as string,
+        ...(row.note ? { note: row.note as string } : {}),
+        ...(row.logged_by_name ? { loggedByName: row.logged_by_name as string } : {}),
+    };
+}
+
 function mapCustomCategory(rows: Record<string, unknown>[]): Record<string, CategoryMeta> {
     return Object.fromEntries(
         rows.map((r) => [
@@ -346,7 +377,7 @@ function mapCustomCategory(rows: Record<string, unknown>[]): Record<string, Cate
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
 async function fetchAll(tripId: string): Promise<BarkadaStore> {
-    const [tripRes, membersRes, budgetRes, expensesRes, carpoolsRes, catRes, groceryRes, collectionsRes, paymentsRes] = await Promise.all([
+    const [tripRes, membersRes, budgetRes, expensesRes, carpoolsRes, catRes, groceryRes, collectionsRes, paymentsRes, directPaymentsRes] = await Promise.all([
         supabase.from('trips').select('*').eq('id', tripId).single(),
         supabase.from('members').select('*').eq('trip_id', tripId).order('created_at'),
         supabase.from('budget_items').select('*').eq('trip_id', tripId).order('created_at'),
@@ -356,6 +387,7 @@ async function fetchAll(tripId: string): Promise<BarkadaStore> {
         supabase.from('grocery_items').select('*').eq('trip_id', tripId).order('created_at'),
         supabase.from('collections').select('*').eq('trip_id', tripId).order('created_at'),
         supabase.from('collection_payments').select('*').order('paid_at', { ascending: false }),
+        supabase.from('direct_payments').select('*').eq('trip_id', tripId).order('created_at', { ascending: false }),
     ]);
 
     const collectionIds = (collectionsRes.data ?? []).map((c) => c.id as string);
@@ -372,6 +404,7 @@ async function fetchAll(tripId: string): Promise<BarkadaStore> {
         groceryItems: (groceryRes.data ?? []).map(mapGroceryItem),
         collections: (collectionsRes.data ?? []).map(mapCollection),
         collectionPayments: filteredPayments.map(mapCollectionPayment),
+        directPayments: (directPaymentsRes.data ?? []).map(mapDirectPayment),
     };
 }
 
@@ -580,6 +613,15 @@ export function useTripStore(tripId: string) {
             })
             .subscribe();
 
+        const directPaymentsChannel = supabase
+            .channel(`direct_payments:${tripId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_payments', filter: `trip_id=eq.${tripId}` }, () => {
+                supabase.from('direct_payments').select('*').eq('trip_id', tripId).order('created_at', { ascending: false }).then(({ data }) => {
+                    setStore((prev) => ({ ...prev, directPayments: (data ?? []).map(mapDirectPayment) }));
+                });
+            })
+            .subscribe();
+
         return () => {
             supabase.removeChannel(tripChannel);
             supabase.removeChannel(membersChannel);
@@ -590,6 +632,7 @@ export function useTripStore(tripId: string) {
             supabase.removeChannel(groceryChannel);
             supabase.removeChannel(collectionsChannel);
             supabase.removeChannel(collectionPaymentsChannel);
+            supabase.removeChannel(directPaymentsChannel);
         };
     }, [isHydrated, tripId]);
 
@@ -972,6 +1015,25 @@ export function useTripStore(tripId: string) {
         );
     };
 
+    const addDirectPayment = async (fromId: string, toId: string, amount: number, paidAt: string, note?: string, loggedByName?: string): Promise<void> => {
+        const id = crypto.randomUUID();
+        const createdAt = new Date().toISOString();
+        const payment: DirectPayment = { id, fromId, toId, amount, paidAt, createdAt, ...(note ? { note } : {}), ...(loggedByName ? { loggedByName } : {}) };
+        setStore((prev) => ({ ...prev, directPayments: [payment, ...(prev.directPayments ?? [])] }));
+        await trySupabase(
+            async () => { await supabase.from('direct_payments').insert({ id, trip_id: tripId, from_id: fromId, to_id: toId, amount, note: note ?? null, paid_at: paidAt, created_at: createdAt, logged_by_name: loggedByName ?? null }); },
+            { type: 'addDirectPayment', payment },
+        );
+    };
+
+    const removeDirectPayment = async (id: string): Promise<void> => {
+        setStore((prev) => ({ ...prev, directPayments: (prev.directPayments ?? []).filter((p) => p.id !== id) }));
+        await trySupabase(
+            async () => { await supabase.from('direct_payments').delete().eq('id', id); },
+            { type: 'removeDirectPayment', id },
+        );
+    };
+
     const clearAll = async () => {
         setStore(DEFAULT_STORE);
         await supabase.from('trips').delete().eq('id', tripId);
@@ -1012,6 +1074,8 @@ export function useTripStore(tripId: string) {
         removeCollection,
         addCollectionPayment,
         removeCollectionPayment,
+        addDirectPayment,
+        removeDirectPayment,
         clearAll,
     };
 }

@@ -179,6 +179,8 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
         removeCollection,
         addCollectionPayment,
         removeCollectionPayment,
+        addDirectPayment,
+        removeDirectPayment,
     } = useTripStore(tripId);
 
     const { isSubscribed: notifSubscribed, isLoading: notifLoading, isSupported: notifSupported, subscribe: subscribeToNotifs, unsubscribe: unsubscribeFromNotifs } = usePushNotifications(tripId, currentUserName);
@@ -482,7 +484,7 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                             {view === 'expenses' && (
                                 <ExpensesView store={store} onAdd={addExpense} onRemove={removeExpense} currentUserName={currentUserName || undefined} myMemberId={myMemberId ?? undefined} />
                             )}
-                            {view === 'settlement' && <SettlementView store={store} myMemberId={myMemberId ?? undefined} />}
+                            {view === 'settlement' && <SettlementView store={store} myMemberId={myMemberId ?? undefined} onAddDirectPayment={addDirectPayment} onRemoveDirectPayment={removeDirectPayment} />}
                             {view === 'categories' && (
                                 <CategoriesView
                                     store={store}
