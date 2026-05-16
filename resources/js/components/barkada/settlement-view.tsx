@@ -142,6 +142,7 @@ export function SettlementView({ store, myMemberId, onAddDirectPayment, onRemove
 
     const [recordingSettlement, setRecordingSettlement] = useState<Settlement | null>(null);
 
+    // How much each member paid in expenses
     const paidByMember: Record<string, number> = Object.fromEntries(members.map((m) => [m.id, 0]));
     for (const expense of activeExpenses) {
         if (paidByMember[expense.paidById] !== undefined) {
@@ -149,12 +150,40 @@ export function SettlementView({ store, myMemberId, onAddDirectPayment, onRemove
         }
     }
 
-    // Collection payments already paid by each member (credits toward their share)
-    const collectionPaidByMember: Record<string, number> = Object.fromEntries(members.map((m) => [m.id, 0]));
-    for (const payment of collectionPayments) {
-        if (collectionPaidByMember[payment.fromMemberId] !== undefined) {
-            collectionPaidByMember[payment.fromMemberId] += payment.amount;
+    // Correct net balance per member — mirrors calculateSettlements logic exactly:
+    // +expense paid, −expense share, +collection sent, −collection received, +directOut, −directIn
+    const memberBalances: Record<string, number> = Object.fromEntries(members.map((m) => [m.id, 0]));
+
+    for (const expense of activeExpenses) {
+        if (expense.splitType === 'kkb') continue;
+        const { amount, paidById, splitType, customSplits, memberIds } = expense;
+        let shares: Record<string, number>;
+        if (splitType === 'equal') {
+            const splitIds = memberIds ?? members.map((m) => m.id);
+            const perPerson = splitIds.length > 0 ? amount / splitIds.length : 0;
+            shares = Object.fromEntries(splitIds.map((id) => [id, perPerson]));
+        } else {
+            shares = customSplits;
         }
+        if (memberBalances[paidById] !== undefined) memberBalances[paidById] += amount;
+        for (const [memberId, share] of Object.entries(shares)) {
+            if (memberBalances[memberId] !== undefined) memberBalances[memberId] -= share;
+        }
+    }
+
+    const collectorByCollection: Record<string, string> = Object.fromEntries(
+        collections.map((c) => [c.id, c.collectorId]),
+    );
+    for (const payment of collectionPayments) {
+        const collectorId = collectorByCollection[payment.collectionId];
+        if (!collectorId) continue;
+        if (memberBalances[payment.fromMemberId] !== undefined) memberBalances[payment.fromMemberId] += payment.amount;
+        if (memberBalances[collectorId] !== undefined) memberBalances[collectorId] -= payment.amount;
+    }
+
+    for (const payment of directPayments) {
+        if (memberBalances[payment.fromId] !== undefined) memberBalances[payment.fromId] += payment.amount;
+        if (memberBalances[payment.toId] !== undefined) memberBalances[payment.toId] -= payment.amount;
     }
 
     const memberById = Object.fromEntries(members.map((m) => [m.id, m]));
@@ -362,10 +391,7 @@ export function SettlementView({ store, myMemberId, onAddDirectPayment, onRemove
                     <div className="divide-y sm:hidden">
                         {members.map((m) => {
                             const paid = paidByMember[m.id] ?? 0;
-                            const collectionPaid = collectionPaidByMember[m.id] ?? 0;
-                            const directOut = directPayments.filter((p) => p.fromId === m.id).reduce((s, p) => s + p.amount, 0);
-                            const directIn = directPayments.filter((p) => p.toId === m.id).reduce((s, p) => s + p.amount, 0);
-                            const net = paid + collectionPaid + directOut - directIn - sharePerPerson;
+                            const net = memberBalances[m.id] ?? 0;
                             const isOwed = net > 0.005;
                             const owes = net < -0.005;
                             return (
@@ -377,12 +403,6 @@ export function SettlementView({ store, myMemberId, onAddDirectPayment, onRemove
                                             {m.id === myMemberId && <span className="ml-1.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">YOU</span>}
                                         </p>
                                         <p className="text-xs text-muted-foreground">Expenses paid {formatPeso(paid)}</p>
-                                        {collectionPaid > 0 && (
-                                            <p className="text-xs text-indigo-600 dark:text-indigo-400">+ Collections {formatPeso(collectionPaid)}</p>
-                                        )}
-                                        {directOut > 0 && (
-                                            <p className="text-xs text-green-600 dark:text-green-400">+ Direct paid {formatPeso(directOut)}</p>
-                                        )}
                                     </div>
                                     <div className="text-right">
                                         <p className={cn('text-sm font-bold tabular-nums', isOwed ? 'text-green-600 dark:text-green-400' : owes ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground')}>
@@ -402,18 +422,13 @@ export function SettlementView({ store, myMemberId, onAddDirectPayment, onRemove
                             <TableRow>
                                 <TableHead className="pl-6">Member</TableHead>
                                 <TableHead className="text-right">Expenses Paid</TableHead>
-                                <TableHead className="text-right">Collections</TableHead>
-                                <TableHead className="text-right">Direct Paid</TableHead>
-                                <TableHead className="pr-6 text-right">Net</TableHead>
+                                <TableHead className="pr-6 text-right">Net Balance</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {members.map((m) => {
                                 const paid = paidByMember[m.id] ?? 0;
-                                const collectionPaid = collectionPaidByMember[m.id] ?? 0;
-                                const directOut = directPayments.filter((p) => p.fromId === m.id).reduce((s, p) => s + p.amount, 0);
-                                const directIn = directPayments.filter((p) => p.toId === m.id).reduce((s, p) => s + p.amount, 0);
-                                const net = paid + collectionPaid + directOut - directIn - sharePerPerson;
+                                const net = memberBalances[m.id] ?? 0;
                                 const isOwed = net > 0.005;
                                 const owes = net < -0.005;
                                 return (
@@ -428,12 +443,6 @@ export function SettlementView({ store, myMemberId, onAddDirectPayment, onRemove
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums text-muted-foreground">{formatPeso(paid)}</TableCell>
-                                        <TableCell className="text-right tabular-nums text-indigo-600 dark:text-indigo-400">
-                                            {collectionPaid > 0 ? formatPeso(collectionPaid) : '—'}
-                                        </TableCell>
-                                        <TableCell className="text-right tabular-nums text-green-600 dark:text-green-400">
-                                            {directOut > 0 ? formatPeso(directOut) : '—'}
-                                        </TableCell>
                                         <TableCell className={cn('pr-6 text-right font-semibold tabular-nums', isOwed ? 'text-green-600 dark:text-green-400' : owes ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground')}>
                                             {isOwed ? '+' : ''}{formatPeso(net)}
                                         </TableCell>
@@ -445,8 +454,6 @@ export function SettlementView({ store, myMemberId, onAddDirectPayment, onRemove
                             <TableRow>
                                 <TableCell className="pl-6">Total</TableCell>
                                 <TableCell className="text-right font-semibold tabular-nums">{formatPeso(totalSpend)}</TableCell>
-                                <TableCell />
-                                <TableCell />
                                 <TableCell className="pr-6" />
                             </TableRow>
                         </TableFooter>
