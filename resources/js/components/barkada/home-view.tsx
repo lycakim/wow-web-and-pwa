@@ -503,19 +503,12 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                             {members.length > 0 && activeBudgetItems.length > 0 && (
                                 <Card className="gap-0 py-0">
                                     <CardContent className="p-5">
-                                        <div className="mb-3 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Member Balances</p>
-                                                <p className="text-[11px] text-muted-foreground">Who owes what</p>
-                                            </div>
-                                            {memberBalanceSummaries.length > 5 && (
-                                                <button type="button" onClick={() => onNavigate('members')} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
-                                                    View all
-                                                </button>
-                                            )}
+                                        <div className="mb-3">
+                                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Member Balances</p>
+                                            <p className="text-[11px] text-muted-foreground">Who owes what</p>
                                         </div>
                                         <div className="space-y-2.5">
-                                            {memberBalanceSummaries.slice(0, 5).map(({ member, share, advance, remaining: memberRemaining }) => {
+                                            {memberBalanceSummaries.map(({ member, share, advance, remaining: memberRemaining }) => {
                                                 const isMe = member.id === myMemberId;
                                                 const isSettled = memberRemaining <= 0.005;
                                                 const isOverpaid = advance > share + 0.005;
@@ -561,11 +554,6 @@ export function HomeView({ store, myMemberId: myMemberIdProp, onUpdateTrip, onNa
                                                     </div>
                                                 );
                                             })}
-                                            {memberBalanceSummaries.length > 5 && (
-                                                <p className="pt-1 text-center text-[11px] text-muted-foreground">
-                                                    +{memberBalanceSummaries.length - 5} more members
-                                                </p>
-                                            )}
                                         </div>
                                     </CardContent>
                                 </Card>
