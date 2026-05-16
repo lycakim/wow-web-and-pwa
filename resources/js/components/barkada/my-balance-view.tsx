@@ -271,14 +271,14 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
                             <div className="flex items-center gap-2 text-indigo-100">
                                 <Wallet className="size-4" />
                                 <span className="text-sm font-medium">
-                                    {overpaid ? 'You\'ve overpaid!' : stillNeeded === 0 ? 'You\'re all paid up!' : 'Still need to bring'}
+                                    {overpaid ? 'Paid more than share' : stillNeeded === 0 ? 'Fully paid!' : 'Still need to bring'}
                                 </span>
                             </div>
                             <p className="mt-1 text-4xl font-bold tabular-nums text-white">
                                 {stillNeeded === 0 && !overpaid ? '✓ All good!' : formatPeso(overpaid ? myTotalAdvance - myTotalShare : stillNeeded)}
                             </p>
                             {overpaid && (
-                                <p className="mt-1 text-xs text-indigo-100">You'll get this back from the group</p>
+                                <p className="mt-1 text-xs text-indigo-100">Extra will be settled with the group</p>
                             )}
 
                             <div className="mt-4 flex items-center gap-4 border-t border-white/20 pt-4">
@@ -293,7 +293,7 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
                                 </div>
                                 <div className="text-white/40">=</div>
                                 <div>
-                                    <p className="text-[11px] text-indigo-200">{overpaid ? 'Overpaid' : stillNeeded === 0 ? 'Settled' : 'Remaining'}</p>
+                                    <p className="text-[11px] text-indigo-200">{overpaid ? 'Extra paid' : stillNeeded === 0 ? 'Settled' : 'Remaining'}</p>
                                     <p className="text-sm font-semibold tabular-nums text-white">
                                         {overpaid ? `+${formatPeso(myTotalAdvance - myTotalShare)}` : stillNeeded === 0 ? '₱0.00' : formatPeso(stillNeeded)}
                                     </p>
@@ -484,7 +484,7 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
                                                     {isOver ? `+${formatPeso(advance - share)}` : remaining === 0 ? '✓' : formatPeso(remaining)}
                                                 </p>
                                                 <p className="text-[10px] text-muted-foreground">
-                                                    {isOver ? 'overpaid' : remaining === 0 ? 'settled' : 'left'}
+                                                    {isOver ? 'extra paid' : remaining === 0 ? 'settled' : 'left'}
                                                 </p>
                                             </div>
                                         </div>
