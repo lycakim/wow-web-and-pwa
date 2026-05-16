@@ -103,10 +103,6 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
     const myTotalAdvance = myCollectionPayments.reduce((s, p) => s + p.amount, 0)
         + myMemberPayments.reduce((s, p) => s + p.amount, 0);
 
-    // Still need to bring
-    const stillNeeded = Math.max(0, myBudgetShare - myTotalAdvance);
-    const overpaid = myTotalAdvance > myBudgetShare;
-
     // Budget breakdown by category for selected member
     const categoryShares: { key: string; label: string; icon: string; share: number }[] = [];
     const seenCategories = new Set<string>();
@@ -138,6 +134,11 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
     const contingency = store.contingency ?? 0;
     const myBufferShare = members.length > 0 ? withBuffer / members.length : 0;
     const myContingencyShare = members.length > 0 ? contingency / members.length : 0;
+    const myTotalShare = myBudgetShare + myBufferShare + myContingencyShare;
+
+    // Still need to bring (uses full share including buffer + contingency)
+    const stillNeeded = Math.max(0, myTotalShare - myTotalAdvance);
+    const overpaid = myTotalAdvance > myTotalShare;
 
     // All members summary
     const memberSummaries = members.map((m) => {
@@ -276,7 +277,7 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
                                 </span>
                             </div>
                             <p className="mt-1 text-4xl font-bold tabular-nums text-white">
-                                {formatPeso(overpaid ? myTotalAdvance - myBudgetShare : stillNeeded)}
+                                {formatPeso(overpaid ? myTotalAdvance - myTotalShare : stillNeeded)}
                             </p>
                             {overpaid && (
                                 <p className="mt-1 text-xs text-indigo-100">You'll get this back from the group</p>
@@ -285,7 +286,7 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
                             <div className="mt-4 flex items-center gap-4 border-t border-white/20 pt-4">
                                 <div>
                                     <p className="text-[11px] text-indigo-200">Budget share</p>
-                                    <p className="text-sm font-semibold tabular-nums text-white">{formatPeso(myBudgetShare + myBufferShare + myContingencyShare)}</p>
+                                    <p className="text-sm font-semibold tabular-nums text-white">{formatPeso(myTotalShare)}</p>
                                 </div>
                                 <div className="text-white/40">−</div>
                                 <div>
@@ -296,7 +297,7 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
                                 <div>
                                     <p className="text-[11px] text-indigo-200">{overpaid ? 'Overpaid' : 'Remaining'}</p>
                                     <p className="text-sm font-semibold tabular-nums text-white">
-                                        {overpaid ? '+' : ''}{formatPeso(overpaid ? myTotalAdvance - myBudgetShare : stillNeeded)}
+                                        {overpaid ? '+' : ''}{formatPeso(overpaid ? myTotalAdvance - myTotalShare : stillNeeded)}
                                     </p>
                                 </div>
                             </div>
@@ -342,7 +343,7 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
                                 <div className="flex items-center justify-between bg-muted/40 px-4 py-3">
                                     <span className="text-sm font-semibold">Total share</span>
                                     <span className="text-sm font-bold tabular-nums text-indigo-600 dark:text-indigo-400">
-                                        {formatPeso(myBudgetShare + myBufferShare + myContingencyShare)}
+                                        {formatPeso(myTotalShare)}
                                     </span>
                                 </div>
                             </div>
