@@ -60,6 +60,7 @@ export function CategoriesDialog({ open, onOpenChange, store, onAdd, onRemove }:
     const customKeys = Object.keys(store.customCategories);
 
     return (
+        <>
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
                 <DialogHeader>
@@ -188,5 +189,6 @@ export function CategoriesDialog({ open, onOpenChange, store, onAdd, onRemove }:
             description={`Delete "${deleteTarget?.label}"? This cannot be undone.`}
             onConfirm={() => { if (deleteTarget) onRemove(deleteTarget.key); }}
         />
+        </>
     );
 }

@@ -48,6 +48,9 @@ const VIEW_LABELS: Record<View, string> = {
     settlement: 'Settlement',
     categories: 'Categories',
     carpools: 'Carpools',
+    grocery: 'Grocery',
+    collections: 'Collections',
+    mybalance: 'My Balance',
 };
 
 function useDarkMode() {

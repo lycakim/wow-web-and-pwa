@@ -1,3 +1,5 @@
+/// <reference lib="webworker" />
+
 import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 
@@ -40,9 +42,8 @@ self.addEventListener('push', (event: PushEvent) => {
             badge: '/pwa-192x192.png',
             tag: data.tag ?? 'barkada',
             renotify: true,
-            // @ts-expect-error - vibrate is not in the TS types but is supported
             vibrate: [200, 100, 200],
-        }),
+        } as NotificationOptions),
     );
 });
 

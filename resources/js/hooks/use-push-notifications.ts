@@ -44,7 +44,7 @@ export function usePushNotifications(tripId: string, memberName?: string) {
             const reg = await navigator.serviceWorker.ready;
             const sub = await reg.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer,
             });
 
             const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
