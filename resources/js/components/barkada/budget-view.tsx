@@ -189,8 +189,17 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
     const allItemsBudget = activeBudgetItems.filter((i) => !i.carpoolId).reduce((s, i) => s + i.amount, 0);
     const bufferAmount = allItemsBudget * (budgetBuffer / 100);
     const contingencyAmount = allItemsBudget * ((contingency ?? 0) / 100);
+    const allSubtotal = allItemsBudget + bufferAmount + contingencyAmount;
     const grandTotal = totalBudget + bufferAmount + contingencyAmount;
     const memberCount = store.members.length;
+
+    // Carpool subtotals (only items assigned to each carpool)
+    const carpoolSubtotals = store.carpools
+        .map((carpool) => ({
+            carpool,
+            total: activeBudgetItems.filter((i) => i.carpoolId === carpool.id).reduce((s, i) => s + i.amount, 0),
+        }))
+        .filter(({ total }) => total > 0);
 
     return (
         <>
@@ -286,9 +295,10 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                     {budgetItems.length > 0 && (
                         <CardFooter className="flex flex-col gap-0 px-0 pb-0">
                             <div className="w-full border-t px-6 py-4 space-y-2">
+                                {/* All-members split section */}
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">Total</span>
-                                    <span className="tabular-nums font-medium">{formatPeso(totalBudget)}</span>
+                                    <span className="text-muted-foreground">Total (split all)</span>
+                                    <span className="tabular-nums font-medium">{formatPeso(allItemsBudget)}</span>
                                 </div>
                                 {budgetBuffer > 0 && (
                                     <div className="flex items-center justify-between text-sm">
@@ -306,10 +316,38 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                                         </span>
                                     </div>
                                 )}
+                                {(budgetBuffer > 0 || (contingency ?? 0) > 0) && (
+                                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                        <span>Subtotal (all)</span>
+                                        <span className="tabular-nums">
+                                            {memberCount > 0 ? `${formatPeso(allSubtotal / memberCount)}/person` : formatPeso(allSubtotal)}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Per-carpool section */}
+                                {carpoolSubtotals.length > 0 && (
+                                    <>
+                                        <div className="border-t pt-2" />
+                                        {carpoolSubtotals.map(({ carpool, total }) => {
+                                            const pax = carpool.memberIds.length;
+                                            return (
+                                                <div key={carpool.id} className="flex items-center justify-between text-sm">
+                                                    <span className="text-muted-foreground">🚗 {carpool.name}</span>
+                                                    <span className="tabular-nums text-muted-foreground">
+                                                        {formatPeso(total)}{pax > 0 ? ` · ${formatPeso(total / pax)}/pax` : ''}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </>
+                                )}
+
+                                {/* Grand total */}
                                 <div className="flex items-center justify-between border-t pt-2 text-sm font-bold">
                                     <span>Grand total</span>
                                     <span className="tabular-nums text-indigo-600 dark:text-indigo-400">
-                                        {memberCount > 0 ? `${formatPeso(grandTotal / memberCount)}/person` : formatPeso(grandTotal)}
+                                        {formatPeso(grandTotal)}
                                     </span>
                                 </div>
                             </div>
