@@ -402,17 +402,17 @@ export function BudgetView({ store, onAdd, onUpdate, onRemove, onSetBudgetBuffer
                                         );
                                     })}
                                 </TableBody>
+                                <TableFooter>
+                                    <TableRow>
+                                        <TableCell className="pl-6 font-semibold">Total</TableCell>
+                                        <TableCell className="text-right font-semibold tabular-nums">{formatPeso(totalBudget)}</TableCell>
+                                        <TableCell className="text-right font-semibold tabular-nums">{formatPeso(totalSpend)}</TableCell>
+                                        <TableCell className={cn('pr-6 text-right font-semibold tabular-nums', totalRemaining < 0 ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+                                            {totalRemaining < 0 ? '-' : ''}{formatPeso(Math.abs(totalRemaining))}
+                                        </TableCell>
+                                    </TableRow>
+                                </TableFooter>
                             </Table>
-                            <div className="flex items-center justify-between border-t px-6 py-3 text-sm font-semibold">
-                                <span>Total</span>
-                                <div className="flex gap-8 tabular-nums">
-                                    <span>{formatPeso(totalBudget)}</span>
-                                    <span>{formatPeso(totalSpend)}</span>
-                                    <span className={cn(totalRemaining < 0 ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
-                                        {totalRemaining < 0 ? '-' : ''}{formatPeso(Math.abs(totalRemaining))}
-                                    </span>
-                                </div>
-                            </div>
                         </CardContent>
                     </Card>
                 )}
