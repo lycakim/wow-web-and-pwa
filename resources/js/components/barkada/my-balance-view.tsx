@@ -136,7 +136,7 @@ export function MyBalanceView({ store, myMemberId: myMemberIdProp, onAddMemberPa
 
     // Still need to bring (uses full share including buffer + contingency)
     const stillNeeded = Math.max(0, myTotalShare - myTotalAdvance);
-    const overpaid = myTotalAdvance > myTotalShare;
+    const overpaid = myTotalAdvance - myTotalShare > 0.005;
 
     // All members summary
     const totalRate = 1 + (budgetBuffer + contingency) / 100;
