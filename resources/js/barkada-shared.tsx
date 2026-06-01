@@ -11,6 +11,7 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+import { AbruptGalaView } from '@/components/barkada/abrupt-gala-view';
 import { BudgetView } from '@/components/barkada/budget-view';
 import { CollectionsView } from '@/components/barkada/collections-view';
 import { MyBalanceView } from '@/components/barkada/my-balance-view';
@@ -45,7 +46,7 @@ import { useTripStore } from '@/hooks/use-trip-store';
 import { cn } from '@/lib/utils';
 import type { View } from '@/types/barkada';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, ArrowLeftRight, Bell, BellOff, Car, Check, ChevronDown, ClipboardList, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Bell, BellOff, Car, Check, ChevronDown, ClipboardList, Copy, HandCoins, Home, LogOut, Moon, Pencil, ReceiptText, RefreshCw, ShoppingCart, Sun, Tag, Users, Wallet, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -61,6 +62,7 @@ const MAIN_NAV: NavItem[] = [
     { view: 'collections', label: 'Payment Status', icon: ClipboardList },
     { view: 'grocery', label: 'Grocery', icon: ShoppingCart },
     { view: 'settlement', label: 'Settlement', icon: HandCoins },
+    { view: 'abrupt-gala', label: 'Spontaneous', icon: Zap },
 ];
 
 const SETUP_NAV: NavItem[] = [
@@ -81,6 +83,7 @@ const VIEW_LABELS: Record<View, string> = {
     grocery: 'Grocery',
     collections: 'Payment Status',
     mybalance: 'My Balance',
+    'abrupt-gala': 'Spontaneous',
 };
 
 function useDarkMode() {
@@ -183,6 +186,11 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
         removeDirectPayment,
         addMemberPayment,
         removeMemberPayment,
+        addAbruptGala,
+        updateAbruptGala,
+        removeAbruptGala,
+        addGalaItem,
+        removeGalaItem,
     } = useTripStore(tripId);
 
     const { isSubscribed: notifSubscribed, isLoading: notifLoading, isSupported: notifSupported, subscribe: subscribeToNotifs, unsubscribe: unsubscribeFromNotifs } = usePushNotifications(tripId, currentUserName);
@@ -539,6 +547,17 @@ function TripApp({ tripId, tripCode, onSwitch, onLeave }: { tripId: string; trip
                             )}
                             {view === 'mybalance' && (
                                 <MyBalanceView store={store} myMemberId={myMemberId ?? undefined} onAddMemberPayment={addMemberPayment} onRemoveMemberPayment={removeMemberPayment} />
+                            )}
+                            {view === 'abrupt-gala' && (
+                                <AbruptGalaView
+                                    members={store.members}
+                                    abruptGalas={store.abruptGalas ?? []}
+                                    onAddGala={addAbruptGala}
+                                    onUpdateGala={updateAbruptGala}
+                                    onRemoveGala={removeAbruptGala}
+                                    onAddItem={addGalaItem}
+                                    onRemoveItem={removeGalaItem}
+                                />
                             )}
                         </>
                     )}

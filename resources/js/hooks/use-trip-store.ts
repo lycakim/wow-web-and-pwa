@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { generateTripCode } from '@/lib/trip-code';
-import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, DirectPayment, Expense, GroceryItem, GrocerySection, Member, MemberPayment, Trip } from '@/types/barkada';
+import type { AbruptGala, BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, DirectPayment, Expense, GalaItem, GroceryItem, GrocerySection, Member, MemberPayment, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useRef, useState } from 'react';
 
@@ -20,6 +20,7 @@ const DEFAULT_STORE: BarkadaStore = {
     collectionPayments: [],
     directPayments: [],
     memberPayments: [],
+    abruptGalas: [],
 };
 
 // ── Pending op types ──────────────────────────────────────────────────────────
@@ -515,9 +516,14 @@ export function useTripStore(tripId: string) {
     // ── Initial load ──────────────────────────────────────────────────────────
 
     useEffect(() => {
+        const localGalas = (): AbruptGala[] => {
+            try { return JSON.parse(localStorage.getItem(`barkada-galas-${tripId}`) ?? '[]'); }
+            catch { return []; }
+        };
+
         fetchAll(tripId)
             .then(async (data) => {
-                setStore(data);
+                setStore({ ...data, abruptGalas: localGalas() });
                 saveCache(tripId, data);
                 setIsHydrated(true);
                 hydrated.current = true;
@@ -529,7 +535,7 @@ export function useTripStore(tripId: string) {
             .catch(() => {
                 // Offline on first load — use cached data
                 const cached = getCached(tripId);
-                if (cached) setStore(cached);
+                if (cached) setStore({ ...cached, abruptGalas: localGalas() });
                 setIsHydrated(true);
                 hydrated.current = true;
             });
@@ -1100,6 +1106,51 @@ export function useTripStore(tripId: string) {
         await supabase.from('trips').delete().eq('id', tripId);
     };
 
+    // ── Abrupt Galas (local-only, not synced to Supabase) ─────────────────────
+
+    const galasKey = `barkada-galas-${tripId}`;
+
+    const loadGalas = (): AbruptGala[] => {
+        try { return JSON.parse(localStorage.getItem(galasKey) ?? '[]'); }
+        catch { return []; }
+    };
+
+    const persistGalas = (galas: AbruptGala[]) => {
+        localStorage.setItem(galasKey, JSON.stringify(galas));
+    };
+
+    const updateGalas = (updater: (prev: AbruptGala[]) => AbruptGala[]) => {
+        const next = updater(loadGalas());
+        persistGalas(next);
+        setStore((prev) => ({ ...prev, abruptGalas: next }));
+    };
+
+    const addAbruptGala = (name: string, memberIds: string[]): void => {
+        const gala: AbruptGala = { id: crypto.randomUUID(), name: name.trim(), memberIds, items: [], createdAt: new Date().toISOString() };
+        updateGalas((prev) => [...prev, gala]);
+    };
+
+    const updateAbruptGala = (id: string, updates: { name?: string; memberIds?: string[] }): void => {
+        updateGalas((prev) => prev.map((g) =>
+            g.id === id
+                ? { ...g, ...(updates.name !== undefined ? { name: updates.name.trim() } : {}), ...(updates.memberIds !== undefined ? { memberIds: updates.memberIds } : {}) }
+                : g,
+        ));
+    };
+
+    const removeAbruptGala = (id: string): void => {
+        updateGalas((prev) => prev.filter((g) => g.id !== id));
+    };
+
+    const addGalaItem = (galaId: string, item: Omit<GalaItem, 'id'>): void => {
+        const newItem: GalaItem = { ...item, id: crypto.randomUUID() };
+        updateGalas((prev) => prev.map((g) => g.id === galaId ? { ...g, items: [...g.items, newItem] } : g));
+    };
+
+    const removeGalaItem = (galaId: string, itemId: string): void => {
+        updateGalas((prev) => prev.map((g) => g.id === galaId ? { ...g, items: g.items.filter((i) => i.id !== itemId) } : g));
+    };
+
     return {
         store,
         isHydrated,
@@ -1139,6 +1190,11 @@ export function useTripStore(tripId: string) {
         removeMemberPayment,
         addDirectPayment,
         removeDirectPayment,
+        addAbruptGala,
+        updateAbruptGala,
+        removeAbruptGala,
+        addGalaItem,
+        removeGalaItem,
         clearAll,
     };
 }
