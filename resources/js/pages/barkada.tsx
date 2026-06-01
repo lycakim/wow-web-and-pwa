@@ -1,3 +1,4 @@
+import { AbruptGalaView } from '@/components/barkada/abrupt-gala-view';
 import { BudgetView } from '@/components/barkada/budget-view';
 import { CarpoolsView } from '@/components/barkada/carpools-view';
 import { CategoriesView } from '@/components/barkada/categories-view';
@@ -11,7 +12,7 @@ import { type BreadcrumbItem } from '@/types';
 import type { View } from '@/types/barkada';
 import { Head } from '@inertiajs/react';
 
-const VALID_VIEWS: View[] = ['home', 'members', 'budget', 'expenses', 'settlement', 'categories', 'carpools'];
+const VALID_VIEWS: View[] = ['home', 'members', 'budget', 'expenses', 'settlement', 'categories', 'carpools', 'abrupt-gala'];
 
 const BREADCRUMB_LABELS: Record<View, string> = {
     home: 'Home',
@@ -21,6 +22,7 @@ const BREADCRUMB_LABELS: Record<View, string> = {
     settlement: 'Settlement',
     categories: 'Categories',
     carpools: 'Carpools',
+    'abrupt-gala': 'Spontaneous',
     grocery: 'Grocery',
     collections: 'Payment Status',
     mybalance: 'My Balance',
@@ -55,6 +57,11 @@ export default function Barkada({ view: rawView }: BarkadaProps) {
         removeCarpool,
         addDirectPayment,
         removeDirectPayment,
+        addAbruptGala,
+        updateAbruptGala,
+        removeAbruptGala,
+        addGalaItem,
+        removeGalaItem,
     } = useBarkadaStore();
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -106,6 +113,17 @@ export default function Barkada({ view: rawView }: BarkadaProps) {
                                 onAdd={addCarpool}
                                 onUpdate={updateCarpool}
                                 onRemove={removeCarpool}
+                            />
+                        )}
+                        {view === 'abrupt-gala' && (
+                            <AbruptGalaView
+                                members={store.members}
+                                abruptGalas={store.abruptGalas ?? []}
+                                onAddGala={addAbruptGala}
+                                onUpdateGala={updateAbruptGala}
+                                onRemoveGala={removeAbruptGala}
+                                onAddItem={addGalaItem}
+                                onRemoveItem={removeGalaItem}
                             />
                         )}
                     </>

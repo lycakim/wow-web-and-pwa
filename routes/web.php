@@ -22,6 +22,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('barkada/settlement', fn () => Inertia::render('barkada', ['view' => 'settlement']))->name('barkada.settlement');
     Route::get('barkada/categories', fn () => Inertia::render('barkada', ['view' => 'categories']))->name('barkada.categories');
     Route::get('barkada/carpools', fn () => Inertia::render('barkada', ['view' => 'carpools']))->name('barkada.carpools');
+    Route::get('barkada/spontaneous', fn () => Inertia::render('barkada', ['view' => 'abrupt-gala']))->name('barkada.spontaneous');
 });
 
 require __DIR__.'/settings.php';

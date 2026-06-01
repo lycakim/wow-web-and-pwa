@@ -13,7 +13,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Car, Folder, HandCoins, LayoutGrid, ReceiptText, Tag, Users, Wallet } from 'lucide-react';
+import { BookOpen, Car, Folder, HandCoins, LayoutGrid, ReceiptText, Tag, Users, Wallet, Zap } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -31,6 +31,7 @@ const barkadaNavItems: NavItem[] = [
     { title: 'Settlement', href: { url: '/barkada/settlement', method: 'get' }, icon: HandCoins },
     { title: 'Categories', href: { url: '/barkada/categories', method: 'get' }, icon: Tag },
     { title: 'Carpools', href: { url: '/barkada/carpools', method: 'get' }, icon: Car },
+    { title: 'Spontaneous', href: { url: '/barkada/spontaneous', method: 'get' }, icon: Zap },
 ];
 
 const footerNavItems: NavItem[] = [

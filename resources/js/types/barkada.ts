@@ -1,6 +1,6 @@
 export type Category = string;
 
-export type View = 'home' | 'members' | 'budget' | 'expenses' | 'settlement' | 'categories' | 'carpools' | 'grocery' | 'collections' | 'mybalance';
+export type View = 'home' | 'members' | 'budget' | 'expenses' | 'settlement' | 'categories' | 'carpools' | 'grocery' | 'collections' | 'mybalance' | 'abrupt-gala';
 
 export interface Member {
     id: string;
@@ -58,6 +58,7 @@ export interface BarkadaStore {
     collectionPayments: CollectionPayment[];
     directPayments: DirectPayment[];
     memberPayments: MemberPayment[];
+    abruptGalas: AbruptGala[];
 }
 
 export type GrocerySection = 'buy' | 'bring' | 'meal';
@@ -124,6 +125,21 @@ export interface Settlement {
     fromId: string;
     toId: string;
     amount: number;
+}
+
+export interface GalaItem {
+    id: string;
+    description: string;
+    amount: number;
+    paidById: string;
+}
+
+export interface AbruptGala {
+    id: string;
+    name: string;
+    memberIds: string[];
+    items: GalaItem[];
+    createdAt: string;
 }
 
 export interface CategoryMeta {

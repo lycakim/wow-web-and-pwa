@@ -1,4 +1,4 @@
-import type { BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, DirectPayment, Expense, GroceryItem, GrocerySection, Member, MemberPayment, Settlement, Trip } from '@/types/barkada';
+import type { AbruptGala, BarkadaStore, BudgetItem, Carpool, Category, CategoryMeta, Collection, CollectionPayment, DirectPayment, Expense, GalaItem, GroceryItem, GrocerySection, Member, MemberPayment, Settlement, Trip } from '@/types/barkada';
 import { CATEGORIES, CATEGORY_KEYS, CUSTOM_CATEGORY_COLORS } from '@/types/barkada';
 import { useEffect, useState } from 'react';
 
@@ -20,6 +20,7 @@ const DEFAULT_STORE: BarkadaStore = {
     collectionPayments: [],
     directPayments: [],
     memberPayments: [],
+    abruptGalas: [],
 };
 
 function persist(store: BarkadaStore): void {
@@ -199,6 +200,7 @@ export function useBarkadaStore() {
                     collectionPayments: parsed.collectionPayments ?? [],
                     directPayments: parsed.directPayments ?? [],
                     memberPayments: parsed.memberPayments ?? [],
+                    abruptGalas: parsed.abruptGalas ?? [],
                 });
             }
         } catch {
@@ -485,6 +487,51 @@ export function useBarkadaStore() {
         updateStore((prev) => ({ ...prev, directPayments: prev.directPayments.filter((p) => p.id !== id) }));
     };
 
+    const addAbruptGala = (name: string, memberIds: string[]) => {
+        const gala: AbruptGala = {
+            id: crypto.randomUUID(),
+            name: name.trim(),
+            memberIds,
+            items: [],
+            createdAt: new Date().toISOString(),
+        };
+        updateStore((prev) => ({ ...prev, abruptGalas: [...(prev.abruptGalas ?? []), gala] }));
+    };
+
+    const updateAbruptGala = (id: string, updates: { name?: string; memberIds?: string[] }) => {
+        updateStore((prev) => ({
+            ...prev,
+            abruptGalas: (prev.abruptGalas ?? []).map((g) =>
+                g.id === id
+                    ? { ...g, ...(updates.name !== undefined ? { name: updates.name.trim() } : {}), ...(updates.memberIds !== undefined ? { memberIds: updates.memberIds } : {}) }
+                    : g,
+            ),
+        }));
+    };
+
+    const removeAbruptGala = (id: string) => {
+        updateStore((prev) => ({ ...prev, abruptGalas: (prev.abruptGalas ?? []).filter((g) => g.id !== id) }));
+    };
+
+    const addGalaItem = (galaId: string, item: Omit<GalaItem, 'id'>) => {
+        const newItem: GalaItem = { ...item, id: crypto.randomUUID() };
+        updateStore((prev) => ({
+            ...prev,
+            abruptGalas: (prev.abruptGalas ?? []).map((g) =>
+                g.id === galaId ? { ...g, items: [...g.items, newItem] } : g,
+            ),
+        }));
+    };
+
+    const removeGalaItem = (galaId: string, itemId: string) => {
+        updateStore((prev) => ({
+            ...prev,
+            abruptGalas: (prev.abruptGalas ?? []).map((g) =>
+                g.id === galaId ? { ...g, items: g.items.filter((i) => i.id !== itemId) } : g,
+            ),
+        }));
+    };
+
     const clearAll = () => {
         persist(DEFAULT_STORE);
         setStore(DEFAULT_STORE);
@@ -525,6 +572,11 @@ export function useBarkadaStore() {
         removeMemberPayment,
         addDirectPayment,
         removeDirectPayment,
+        addAbruptGala,
+        updateAbruptGala,
+        removeAbruptGala,
+        addGalaItem,
+        removeGalaItem,
         clearAll,
     };
 }
